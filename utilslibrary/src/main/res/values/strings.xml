@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">UtilsLibrary</string>
+
+    <!-- 返回操作 -->
+    <string name="back_pressed_message">退出当前操作?</string>
+    <!--权限请求-->
+    <string name="request_camera_permission">需要相机权限</string>
+    <string name="request_storage_permission">需要存储权限</string>
+    <string name="request_sound_permission">需要录音权限</string>
+
+</resources>
