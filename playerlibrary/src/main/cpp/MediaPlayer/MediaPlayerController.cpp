@@ -8,6 +8,7 @@
 
 _JavaVM *javaVM = NULL;
 MediaPlayer *mediaPlayer = NULL;
+GLESDevice *videoDevice = NULL;
 
 extern "C"
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
@@ -27,44 +28,66 @@ Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetup(JNIEnv *env, jobject 
         mediaPlayer = new MediaPlayer();
     }
     mediaPlayer->setPlayerCallback(new JniMediaPlayerCallback(javaVM, env, &instance));
+    videoDevice = new GLESDevice();
+    videoDevice->start();
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeRelease(JNIEnv *env,
-                                                                     jobject instance) {
+Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeRelease(JNIEnv *env, jobject instance) {
 
     if (mediaPlayer != NULL) {
+        mediaPlayer->stop();
         delete mediaPlayer;
         mediaPlayer = NULL;
     }
 
-}
-
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetSurface(JNIEnv *env,
-                                                                        jobject instance,
-                                                                        jobject surface) {
-    if (mediaPlayer != NULL) {
-        if (surface != NULL) {
-            ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
-            if (!window) {
-                return;
-            }
-            mediaPlayer->setSurface(window);
-        } else {
-            mediaPlayer->setSurface(NULL);
-        }
+    if (videoDevice != NULL) {
+        videoDevice->stop();
+        delete videoDevice;
+        videoDevice = NULL;
     }
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetLooping(JNIEnv *env,
+Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSurfaceCreated(JNIEnv *env,
                                                                         jobject instance,
-                                                                        jboolean looping) {
+                                                                        jobject surface) {
+    if (videoDevice) {
+        ANativeWindow *window = NULL;
+        if (surface != NULL) {
+            window = ANativeWindow_fromSurface(env, surface);
+        }
+        videoDevice->surfaceCreated(window);
+    }
+    if (mediaPlayer) {
+        mediaPlayer->setVideoDevice(videoDevice);
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSurfaceChanged(JNIEnv *env, jobject instance,
+                                                                    jint width, jint height) {
+    if (videoDevice) {
+        videoDevice->surfaceChanged(width, height);
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSurfaceDestroyed(JNIEnv *env, jobject instance) {
+
+    if (videoDevice) {
+        videoDevice->surfaceDestroyed();
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetLooping(JNIEnv *env, jobject instance,
+                                                                jboolean looping) {
     if (mediaPlayer != NULL) {
         mediaPlayer->setLooping(looping);
     }
@@ -73,7 +96,7 @@ Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetLooping(JNIEnv *env,
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativePrepare(JNIEnv *env, jobject instance,
-                                                                     jstring path_) {
+                                                             jstring path_) {
     const char *path = env->GetStringUTFChars(path_, 0);
 
     if (mediaPlayer != NULL) {
@@ -126,7 +149,8 @@ Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeStop(JNIEnv *env, jobject i
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSeek(JNIEnv *env, jobject instance,
-                                                                  jfloat timeMs) {
+                                                          jfloat timeMs) {
+
     if (mediaPlayer != NULL) {
         mediaPlayer->seekTo(timeMs);
     }
@@ -136,6 +160,7 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetMute(JNIEnv *env, jobject instance,
                                                                      jboolean mute) {
+
     if (mediaPlayer != NULL) {
         mediaPlayer->setMute(mute);
     }
@@ -152,7 +177,7 @@ Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetVolume(JNIEnv *env,
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetRate(JNIEnv *env, jobject instance,
-                                                                      jfloat speed) {
+                                                             jfloat speed) {
 
     if (mediaPlayer != NULL) {
         mediaPlayer->setRate(speed);
@@ -163,7 +188,7 @@ Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetRate(JNIEnv *env, jobjec
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetPitch(JNIEnv *env, jobject instance,
-                                                                      jfloat pitch) {
+                                                              jfloat pitch) {
 
     if (mediaPlayer != NULL) {
         mediaPlayer->setPitch(pitch);
@@ -172,8 +197,8 @@ Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetPitch(JNIEnv *env, jobje
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_getDuration(JNIEnv *env,
-                                                                   jobject instance) {
+Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_getDuration(JNIEnv *env, jobject instance) {
+
     if (mediaPlayer != NULL) {
         return mediaPlayer->getDuration();
     }
@@ -182,8 +207,8 @@ Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_getDuration(JNIEnv *env,
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_isPlaying(JNIEnv *env,
-                                                                     jobject instance) {
+Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_isPlaying(JNIEnv *env, jobject instance) {
+
     if (mediaPlayer != NULL) {
         return mediaPlayer->isPlaying();
     }
@@ -192,8 +217,7 @@ Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_isPlaying(JNIEnv *env,
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_getVideoWidth(JNIEnv *env,
-                                                                     jobject instance) {
+Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_getVideoWidth(JNIEnv *env, jobject instance) {
 
     if (mediaPlayer != NULL) {
         return mediaPlayer->getVideoWidth();
@@ -203,8 +227,7 @@ Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_getVideoWidth(JNIEnv *env,
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_getVideoHeight(JNIEnv *env,
-                                                                      jobject instance) {
+Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_getVideoHeight(JNIEnv *env, jobject instance) {
 
     if (mediaPlayer != NULL) {
         return mediaPlayer->getVideoHeight();

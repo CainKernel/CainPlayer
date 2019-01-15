@@ -34,25 +34,20 @@ public:
 
     AVCodecContext *getCodecContext();
 
+    int getMemorySize();
+
+    int hasEnoughPackets();
+
     virtual void run();
 
 protected:
+    Mutex mMutex;
+    Condition mCondition;
+    PlayerState *playerState;
     PacketQueue *packetQueue;       // 数据包队列
     AVCodecContext *pCodecCtx;
     AVStream *pStream;
     int streamIndex;
-
-    AVPacket pkt;
-    AVPacket pkt_temp;
-
-    PlayerState *playerState;
-    int reorder_pts;
-    int packet_pending;
-
-    int64_t start_pts;
-    AVRational start_pts_tb;
-    int64_t next_pts;
-    AVRational next_pts_tb;
 };
 
 

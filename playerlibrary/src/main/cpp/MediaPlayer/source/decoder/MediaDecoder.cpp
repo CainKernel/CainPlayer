@@ -5,19 +5,11 @@
 #include "MediaDecoder.h"
 
 MediaDecoder::MediaDecoder(AVCodecContext *avctx, AVStream *stream, int streamIndex, PlayerState *playerState) {
-    memset(&pkt, 0, sizeof(AVPacket));
-    pkt_temp = pkt;
     packetQueue = new PacketQueue();
     this->pCodecCtx = avctx;
     this->pStream = stream;
     this->streamIndex = streamIndex;
     this->playerState = playerState;
-    reorder_pts = -1;
-    packet_pending = 0;
-    start_pts = AV_NOPTS_VALUE;
-    memset(&start_pts_tb, 0, sizeof(AVRational));
-    next_pts = AV_NOPTS_VALUE;
-    memset(&next_pts_tb, 0, sizeof(next_pts_tb));
 }
 
 MediaDecoder::~MediaDecoder() {
@@ -74,6 +66,18 @@ AVStream *MediaDecoder::getStream() {
 
 AVCodecContext *MediaDecoder::getCodecContext() {
     return pCodecCtx;
+}
+
+int MediaDecoder::getMemorySize() {
+    return packetQueue ? 0 : packetQueue->getSize();
+}
+
+int MediaDecoder::hasEnoughPackets() {
+    return (packetQueue == NULL) || (packetQueue->isAbort())
+           || (pStream->disposition & AV_DISPOSITION_ATTACHED_PIC)
+           || (packetQueue->getPacketSize() > MIN_FRAMES)
+              && (!packetQueue->getDuration()
+                  || av_q2d(pStream->time_base) * packetQueue->getDuration() > 1.0);
 }
 
 void MediaDecoder::run() {

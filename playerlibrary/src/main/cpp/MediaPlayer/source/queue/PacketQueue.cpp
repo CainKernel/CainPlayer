@@ -6,6 +6,11 @@
 
 PacketQueue::PacketQueue() {
     abort_request = 0;
+    first_pkt = NULL;
+    last_pkt = NULL;
+    nb_packets = 0;
+    size = 0;
+    duration = 0;
 }
 
 PacketQueue::~PacketQueue() {
@@ -19,12 +24,28 @@ PacketQueue::~PacketQueue() {
  * @return
  */
 int PacketQueue::put(AVPacket *pkt) {
+    PacketList *pkt1;
+
     if (abort_request) {
         return -1;
     }
-    AVPacket *packet = av_packet_alloc();
-    av_packet_ref(packet, pkt);
-    queue.push(packet);
+
+    pkt1 = (PacketList *) av_malloc(sizeof(PacketList));
+    if (!pkt1) {
+        return -1;
+    }
+    pkt1->pkt = *pkt;
+    pkt1->next = NULL;
+
+    if (!last_pkt) {
+        first_pkt = pkt1;
+    } else {
+        last_pkt->next = pkt1;
+    }
+    last_pkt = pkt1;
+    nb_packets++;
+    size += pkt1->pkt.size + sizeof(*pkt1);
+    duration += pkt1->pkt.duration;
     return 0;
 }
 
@@ -60,34 +81,19 @@ int PacketQueue::pushNullPacket(int stream_index) {
  * 刷新数据包
  */
 void PacketQueue::flush() {
+    PacketList *pkt, *pkt1;
 
     mMutex.lock();
-    while (!queue.empty()) {
-        AVPacket *pkt = queue.front();
-        queue.pop();
-        av_packet_free(&pkt);
+    for (pkt = first_pkt; pkt; pkt = pkt1) {
+        pkt1 = pkt->next;
+        av_packet_unref(&pkt->pkt);
         av_freep(&pkt);
-        pkt = NULL;
     }
-    mCondition.signal();
-    mMutex.unlock();
-}
-
-void PacketQueue::flushToKeyPacket() {
-
-    mMutex.lock();
-
-    while (!queue.empty()) {
-        AVPacket *pkt = queue.front();
-        if (pkt->flags != AV_PKT_FLAG_KEY) {
-            queue.pop();
-            av_packet_free(&pkt);
-            av_freep(&pkt);
-            pkt = NULL;
-        } else {
-            break;
-        }
-    }
+    last_pkt = NULL;
+    first_pkt = NULL;
+    nb_packets = 0;
+    size = 0;
+    duration = 0;
     mCondition.signal();
     mMutex.unlock();
 }
@@ -128,6 +134,7 @@ int PacketQueue::getPacket(AVPacket *pkt) {
  * @return
  */
 int PacketQueue::getPacket(AVPacket *pkt, int block) {
+    PacketList *pkt1;
     int ret;
 
     mMutex.lock();
@@ -137,14 +144,17 @@ int PacketQueue::getPacket(AVPacket *pkt, int block) {
             break;
         }
 
-        if (queue.size() > 0) {
-            AVPacket *packet = queue.front();
-            if (av_packet_ref(pkt, packet) == 0) {
-                queue.pop();
+        pkt1 = first_pkt;
+        if (pkt1) {
+            first_pkt = pkt1->next;
+            if (!first_pkt) {
+                last_pkt = NULL;
             }
-            av_packet_free(&packet);
-            av_freep(&packet);
-            packet = NULL;
+            nb_packets--;
+            size -= pkt1->pkt.size + sizeof(*pkt1);
+            duration -= pkt1->pkt.duration;
+            *pkt = pkt1->pkt;
+            av_free(pkt1);
             ret = 1;
             break;
         } else if (!block) {
@@ -160,5 +170,17 @@ int PacketQueue::getPacket(AVPacket *pkt, int block) {
 
 int PacketQueue::getPacketSize() {
     Mutex::Autolock lock(mMutex);
-    return queue.size();
+    return nb_packets;
+}
+
+int PacketQueue::getSize() {
+    return size;
+}
+
+int64_t PacketQueue::getDuration() {
+    return duration;
+}
+
+int PacketQueue::isAbort() {
+    return abort_request;
 }

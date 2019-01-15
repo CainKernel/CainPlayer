@@ -14,7 +14,7 @@ MediaClock::~MediaClock() {
 
 void MediaClock::init() {
     speed = 1.0;
-    paused = 1;
+    paused = 0;
     setClock(NAN);
 }
 

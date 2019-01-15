@@ -33,6 +33,15 @@ public class MainActivity extends AppCompatActivity {
                 scanMedia(false, false, true);
             }
         });
+
+        findViewById(R.id.btn_hkstv).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, AVMediaPlayerActivity.class);
+                intent.putExtra(AVMediaPlayerActivity.PATH, "rtmp://live.hkstv.hk.lxdns.com/live/hks1");
+                startActivity(intent);
+            }
+        });
     }
 
     private void checkPermissions() {
@@ -79,7 +88,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 })
                 .scanMedia();
-        finish();
     }
 
 }

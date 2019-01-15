@@ -10,6 +10,7 @@ public class AVMediaPlayer {
 
     static {
         System.loadLibrary("ffmpeg");
+        System.loadLibrary("soundtouch");
         System.loadLibrary("media_player");
     }
 
@@ -51,11 +52,27 @@ public class AVMediaPlayer {
     }
 
     /**
-     * 设置Surface
+     * Surface已创建
      * @param surface
      */
-    public void setSurface(Surface surface) {
-        nativeSetSurface(surface);
+    public void surfaceCreated(Surface surface) {
+        nativeSurfaceCreated(surface);
+    }
+
+    /**
+     * Surface发生变化
+     * @param width
+     * @param height
+     */
+    public void surfaceChanged(int width, int height) {
+        nativeSurfaceChanged(width, height);
+    }
+
+    /**
+     * Surface已销毁
+     */
+    public void surfaceDestroyed() {
+        nativeSurfaceDestroyed();
     }
 
     /**
@@ -156,7 +173,9 @@ public class AVMediaPlayer {
     // native方法
     private native void nativeSetup();
     private native void nativeRelease();
-    private native void nativeSetSurface(Surface surface);
+    private native void nativeSurfaceCreated(Surface surface);
+    private native void nativeSurfaceChanged(int width, int height);
+    private native void nativeSurfaceDestroyed();
     private native void nativeSetLooping(boolean looping);
     private native void nativePrepare(String path);
     private native void nativeStart();

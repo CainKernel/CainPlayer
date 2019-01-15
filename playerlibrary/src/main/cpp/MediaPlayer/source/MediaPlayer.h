@@ -35,7 +35,7 @@ public:
 
     void setDataSource(const char *url);
 
-    void setSurface(ANativeWindow *surface);
+    void setVideoDevice(VideoDevice *videoDevice);
 
     void prepare();
 

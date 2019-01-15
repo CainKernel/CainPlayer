@@ -5,6 +5,7 @@
 #include "MediaSync.h"
 
 MediaSync::MediaSync(PlayerState *playerState) {
+    Mutex::Autolock lock(mMutex);
     this->playerState = playerState;
     audioDecoder = NULL;
     videoDecoder = NULL;
@@ -16,22 +17,34 @@ MediaSync::MediaSync(PlayerState *playerState) {
 
     forceRefresh = 0;
     maxFrameDuration = 10.0;
+    frameTimerRefresh = 1;
     frameTimer = 0;
     abortRequest = 0;
 
+    videoDevice = NULL;
     swsContext = NULL;
     mBuffer = NULL;
-    pFrameRGBA = av_frame_alloc();
+    pFrameARGB = av_frame_alloc();
 }
 
 MediaSync::~MediaSync() {
+    Mutex::Autolock lock(mMutex);
     playerState = NULL;
     videoDecoder = NULL;
     audioDecoder = NULL;
-    if (pFrameRGBA) {
-        av_frame_free(&pFrameRGBA);
-        av_freep(&pFrameRGBA);
-        pFrameRGBA = NULL;
+    videoDevice = NULL;
+    if (pFrameARGB) {
+        av_frame_free(&pFrameARGB);
+        av_freep(&pFrameARGB);
+        pFrameARGB = NULL;
+    }
+    if (mBuffer) {
+        av_freep(&mBuffer);
+        mBuffer = NULL;
+    }
+    if (swsContext) {
+        sws_freeContext(swsContext);
+        swsContext = NULL;
     }
 }
 
@@ -60,14 +73,9 @@ void MediaSync::stop() {
     }
 }
 
-void MediaSync::setSurface(ANativeWindow *window) {
-    mMutex.lock();
-    if (this->window != NULL) {
-        ANativeWindow_release(this->window);
-    }
-    this->window = window;
-    mCondition.signal();
-    mMutex.unlock();
+void MediaSync::setVideoDevice(VideoDevice *device) {
+    Mutex::Autolock lock(mMutex);
+    this->videoDevice = device;
 }
 
 void MediaSync::setMaxDuration(double maxDuration) {
@@ -113,6 +121,18 @@ double MediaSync::getMasterClock() {
     return val;
 }
 
+MediaClock* MediaSync::getAudioClock() {
+    return audioClock;
+}
+
+MediaClock *MediaSync::getVideoClock() {
+    return videoClock;
+}
+
+MediaClock *MediaSync::getExternalClock() {
+    return extClock;
+}
+
 void MediaSync::run() {
     ALOGD("media sync thread start!");
     double remaining_time = 0.0;
@@ -131,7 +151,7 @@ void MediaSync::run() {
         }
     }
 
-    ALOGD("render video thread exit!");
+    ALOGD("video refresh thread exit!");
 }
 
 void MediaSync::refreshVideo(double *remaining_time) {
@@ -177,6 +197,9 @@ void MediaSync::refreshVideo(double *remaining_time) {
             delay = calculateDelay(lastDuration);
             // 获取当前时间
             time = av_gettime_relative() / 1000000.0;
+            if (isnan(frameTimer) || time < frameTimer) {
+                frameTimer = time;
+            }
             // 如果当前时间小于帧计时器的时间 + 延时时间，则表示还没到当前帧
             if (time < frameTimer + delay) {
                 *remaining_time = FFMIN(frameTimer + delay - time, *remaining_time);
@@ -204,7 +227,8 @@ void MediaSync::refreshVideo(double *remaining_time) {
                 duration = calculateDuration(currentFrame, nextFrame);
                 // 如果不处于同步到视频状态，并且处于跳帧状态，则跳过当前帧
                 if ((time > frameTimer + duration)
-                    && (playerState->frameDrop && playerState->syncType != AV_SYNC_VIDEO)) {
+                    && (playerState->frameDrop > 0
+                        || (playerState->frameDrop && playerState->syncType != AV_SYNC_VIDEO))) {
                     videoDecoder->getFrameQueue()->popFrame();
                     continue;
                 }
@@ -277,60 +301,83 @@ double MediaSync::calculateDuration(Frame *vp, Frame *nextvp) {
 }
 
 void MediaSync::renderVideo() {
-    if (!videoDecoder) {
+    mMutex.lock();
+    if (!videoDecoder || !videoDevice) {
+        mMutex.unlock();
         return;
     }
     Frame *vp = videoDecoder->getFrameQueue()->lastFrame();
-
-    // 转码
-    AVCodecContext *pCodecCtx = videoDecoder->getCodecContext();
+    int ret = 0;
     if (!vp->uploaded) {
-        if (!swsContext) {
-            // buffer中数据用于渲染,且格式为RGBA
-            int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGBA, pCodecCtx->width, pCodecCtx->height, 1);
+        // 根据图像格式更新纹理数据
+        switch (vp->frame->format) {
+            // YUV420P 和 YUVJ420P 除了色彩空间不一样之外，其他的没什么区别
+            // YUV420P表示的范围是 16 ~ 235，而YUVJ420P表示的范围是0 ~ 255
+            // 这里做了兼容处理，后续可以优化，shader已经过验证
+            case AV_PIX_FMT_YUVJ420P:
+            case AV_PIX_FMT_YUV420P: {
 
-            mBuffer = (uint8_t *)av_malloc(numBytes * sizeof(uint8_t));
-            av_image_fill_arrays(pFrameRGBA->data, pFrameRGBA->linesize, mBuffer, AV_PIX_FMT_RGBA,
-                                 pCodecCtx->width, pCodecCtx->height, 1);
+                // 初始化纹理
+                videoDevice->onInitTexture(vp->frame->width, vp->frame->height,
+                                           FMT_YUV420P, BLEND_NONE);
 
-            // 由于解码出来的帧格式不是RGBA的,在渲染之前需要进行格式转换
-            swsContext = sws_getContext(pCodecCtx->width,
-                                        pCodecCtx->height,
-                                        pCodecCtx->pix_fmt,
-                                        pCodecCtx->width,
-                                        pCodecCtx->height,
-                                        AV_PIX_FMT_RGBA,
-                                        SWS_BICUBIC,
-                                        NULL, NULL, NULL);
-        }
+                if (vp->frame->linesize[0] < 0 || vp->frame->linesize[1] < 0 || vp->frame->linesize[2] < 0) {
+                    av_log(NULL, AV_LOG_ERROR, "Negative linesize is not supported for YUV.\n");
+                    return;
+                }
+                ret = videoDevice->onUpdateYUV(vp->frame->data[0], vp->frame->linesize[0],
+                                               vp->frame->data[1], vp->frame->linesize[1],
+                                               vp->frame->data[2], vp->frame->linesize[2]);
+                if (ret < 0) {
+                    return;
+                }
+                break;
+            }
 
-        // 转码
-        if (swsContext) {
-            sws_scale(swsContext, (uint8_t const * const *)vp->frame->data,
-                      vp->frame->linesize, 0, pCodecCtx->height,
-                      pFrameRGBA->data, pFrameRGBA->linesize);
+            // 直接渲染BGRA，对应的是shader->argb格式
+            case AV_PIX_FMT_BGRA: {
+                videoDevice->onInitTexture(vp->frame->width, vp->frame->height,
+                                           FMT_ARGB, BLEND_NONE);
+                ret = videoDevice->onUpdateARGB(vp->frame->data[0], vp->frame->linesize[0]);
+                if (ret < 0) {
+                    return;
+                }
+                break;
+            }
+
+            // 其他格式转码成BGRA格式再做渲染
+            default: {
+                swsContext = sws_getCachedContext(swsContext,
+                                                  vp->frame->width, vp->frame->height,
+                                                  (AVPixelFormat) vp->frame->format,
+                                                  vp->frame->width, vp->frame->height,
+                                                  AV_PIX_FMT_BGRA, SWS_BICUBIC, NULL, NULL, NULL);
+                if (!mBuffer) {
+                    int numBytes = av_image_get_buffer_size(AV_PIX_FMT_BGRA, vp->frame->width, vp->frame->height, 1);
+                    mBuffer = (uint8_t *)av_malloc(numBytes * sizeof(uint8_t));
+                    av_image_fill_arrays(pFrameARGB->data, pFrameARGB->linesize, mBuffer, AV_PIX_FMT_BGRA,
+                                         vp->frame->width, vp->frame->height, 1);
+                }
+                if (swsContext != NULL) {
+                    sws_scale(swsContext, (uint8_t const *const *) vp->frame->data,
+                              vp->frame->linesize, 0, vp->frame->height,
+                              pFrameARGB->data, pFrameARGB->linesize);
+                }
+
+                videoDevice->onInitTexture(vp->frame->width, vp->frame->height,
+                                           FMT_ARGB, BLEND_NONE);
+                ret = videoDevice->onUpdateARGB(pFrameARGB->data[0], pFrameARGB->linesize[0]);
+                if (ret < 0) {
+                    return;
+                }
+                break;
+            }
         }
         vp->uploaded = 1;
     }
-
-    mMutex.lock();
-    if (window != NULL) {
-        ANativeWindow_setBuffersGeometry(window, pCodecCtx->width, pCodecCtx->height,
-                                         WINDOW_FORMAT_RGBA_8888);
-        ANativeWindow_Buffer windowBuffer;
-        ANativeWindow_lock(window, &windowBuffer, 0);
-
-        // 获取stride
-        uint8_t * dst = (uint8_t *)windowBuffer.bits;
-        int dstStride = windowBuffer.stride * 4;
-        uint8_t * src = pFrameRGBA->data[0];
-        int srcStride = pFrameRGBA->linesize[0];
-        // 由于window的stride和帧的stride不同,因此需要逐行复制
-        int h;
-        for (h = 0; h < pCodecCtx->height; h++) {
-            memcpy(dst + h * dstStride, src + h * srcStride, (size_t) srcStride);
-        }
-        ANativeWindow_unlockAndPost(window);
+    // 请求渲染视频
+    if (videoDevice != NULL) {
+        videoDevice->onRequestRender(vp->frame->linesize[0] < 0 ? FLIP_VERTICAL : FLIP_NONE);
     }
     mMutex.unlock();
 }

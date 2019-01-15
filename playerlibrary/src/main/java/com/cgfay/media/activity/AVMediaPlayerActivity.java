@@ -107,21 +107,21 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
         mMediaPlayer.prepare();
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (mMediaPlayer != null) {
-            mMediaPlayer.pause();
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (mMediaPlayer != null) {
-            mMediaPlayer.resume();
-        }
-    }
+//    @Override
+//    protected void onPause() {
+//        super.onPause();
+//        if (mMediaPlayer != null) {
+//            mMediaPlayer.pause();
+//        }
+//    }
+//
+//    @Override
+//    protected void onResume() {
+//        super.onResume();
+//        if (mMediaPlayer != null) {
+//            mMediaPlayer.resume();
+//        }
+//    }
 
     @Override
     protected void onDestroy() {
@@ -148,19 +148,21 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         if (mMediaPlayer != null) {
-            mMediaPlayer.setSurface(holder.getSurface());
+            mMediaPlayer.surfaceCreated(holder.getSurface());
         }
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
+        if (mMediaPlayer != null) {
+            mMediaPlayer.surfaceChanged(width, height);
+        }
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         if (mMediaPlayer != null) {
-            mMediaPlayer.setSurface(null);
+            mMediaPlayer.surfaceDestroyed();
         }
     }
 }

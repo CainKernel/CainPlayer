@@ -11,6 +11,7 @@ AudioResampler::AudioResampler(PlayerState *playerState, AudioDecoder *audioDeco
     audioState = (AudioState *) av_mallocz(sizeof(AudioState));
     memset(audioState, 0, sizeof(AudioState));
     soundTouchWrapper = new SoundTouchWrapper();
+    frame = av_frame_alloc();
 }
 
 AudioResampler::~AudioResampler() {
@@ -27,6 +28,11 @@ AudioResampler::~AudioResampler() {
         memset(audioState, 0, sizeof(AudioState));
         av_free(audioState);
         audioState = NULL;
+    }
+    if (frame) {
+        av_frame_unref(frame);
+        av_frame_free(&frame);
+        frame = NULL;
     }
 }
 
@@ -140,8 +146,8 @@ int AudioResampler::audioFrameResample() {
     int64_t dec_channel_layout;
     av_unused double audio_clock0;
     int wanted_nb_samples;
-    AVFrame *frame = av_frame_alloc();
     int translate_time = 1;
+    int ret = -1;
 
     // 处于暂停状态
     if (!audioDecoder || playerState->abortRequest || playerState->pauseRequest) {
@@ -151,8 +157,11 @@ int AudioResampler::audioFrameResample() {
     for (;;) {
 
         // 如果数据包解码失败，直接返回
-        if (audioDecoder->getAudioFrame(frame) < 0) {
+        if ((ret = audioDecoder->getAudioFrame(frame)) < 0) {
             return -1;
+        }
+        if (ret == 0) {
+            continue;
         }
 
         data_size = av_samples_get_buffer_size(NULL, av_frame_get_channels(frame),
@@ -267,12 +276,6 @@ int AudioResampler::audioFrameResample() {
                                  + (double) frame->nb_samples / frame->sample_rate;
     } else {
         audioState->audioClock = NAN;
-    }
-
-    if (frame) {
-        av_frame_unref(frame);
-        av_frame_free(&frame);
-        frame = NULL;
     }
 
     return resampled_data_size;

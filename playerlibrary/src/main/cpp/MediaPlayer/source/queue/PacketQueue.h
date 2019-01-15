@@ -13,6 +13,14 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 };
 
+typedef struct PacketList {
+    AVPacket pkt;
+    struct PacketList *next;
+} PacketList;
+
+/**
+ * 备注：这里不用std::queue是为了方便计算队列占用内存和队列的时长，在解码的时候要用到
+ */
 class PacketQueue {
 public:
     PacketQueue();
@@ -28,9 +36,6 @@ public:
     // 刷新
     void flush();
 
-    // 刷新到关键帧
-    void flushToKeyPacket();
-
     // 终止
     void abort();
 
@@ -44,13 +49,23 @@ public:
     int getPacket(AVPacket *pkt, int block);
 
     int getPacketSize();
+
+    int getSize();
+
+    int64_t getDuration();
+
+    int isAbort();
+
 private:
     int put(AVPacket *pkt);
 
 private:
     Mutex mMutex;
     Condition mCondition;
-    std::queue<AVPacket *> queue;
+    PacketList *first_pkt, *last_pkt;
+    int nb_packets;
+    int size;
+    int64_t duration;
     int abort_request;
 };
 

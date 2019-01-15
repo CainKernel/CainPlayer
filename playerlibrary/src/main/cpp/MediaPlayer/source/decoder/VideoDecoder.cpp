@@ -11,11 +11,13 @@ VideoDecoder::VideoDecoder(AVFormatContext *pFormatCtx, AVCodecContext *avctx,
     frameQueue = new FrameQueue(VIDEO_QUEUE_SIZE, 1);
     decodeThread = NULL;
     frame = av_frame_alloc();
+    masterClock = NULL;
 }
 
 VideoDecoder::~VideoDecoder() {
     ALOGI("VideoDecoder destructor");
     stop();
+    mMutex.lock();
     pFormatCtx = NULL;
     if (frameQueue) {
         frameQueue->flush();
@@ -27,6 +29,13 @@ VideoDecoder::~VideoDecoder() {
         av_freep(&frame);
         frame = NULL;
     }
+    masterClock = NULL;
+    mMutex.unlock();
+}
+
+void VideoDecoder::setMasterClock(MediaClock *masterClock) {
+    Mutex::Autolock lock(mMutex);
+    this->masterClock = masterClock;
 }
 
 void VideoDecoder::start() {
@@ -60,10 +69,12 @@ void VideoDecoder::flush() {
 }
 
 int VideoDecoder::getFrameSize() {
+    Mutex::Autolock lock(mMutex);
     return frameQueue ? frameQueue->getFrameSize() : 0;
 }
 
 FrameQueue *VideoDecoder::getFrameQueue() {
+    Mutex::Autolock lock(mMutex);
     return frameQueue;
 }
 
@@ -119,6 +130,29 @@ int VideoDecoder::decodeVideo() {
             continue;
         } else {
             got_picture = 1;
+            // 丢帧处理
+            if (masterClock != NULL) {
+                double dpts = NAN;
+
+                if (frame->pts != AV_NOPTS_VALUE) {
+                    dpts = av_q2d(pStream->time_base) * frame->pts;
+                }
+                // 计算视频帧的长宽比
+                frame->sample_aspect_ratio = av_guess_sample_aspect_ratio(pFormatCtx, pStream,
+                                                                          frame);
+                // 是否需要做舍帧操作
+                if (playerState->frameDrop > 0 ||
+                    (playerState->frameDrop > 0 && playerState->syncType != AV_SYNC_VIDEO)) {
+                    if (frame->pts != AV_NOPTS_VALUE) {
+                        double diff = dpts - masterClock->getClock();
+                        if (!isnan(diff) && fabs(diff) < AV_NOSYNC_THRESHOLD &&
+                            diff < 0 && packetQueue->getPacketSize() > 0) {
+                            av_frame_unref(frame);
+                            got_picture = 0;
+                        }
+                    }
+                }
+            }
         }
 
         if (got_picture) {

@@ -17,6 +17,8 @@ public:
 
     virtual ~VideoDecoder();
 
+    void setMasterClock(MediaClock *masterClock);
+
     void start() override;
 
     void stop() override;
@@ -39,7 +41,7 @@ private:
 
     Thread *decodeThread;           // 解码线程
     AVFrame *frame;
-
+    MediaClock *masterClock;        // 主时钟
 };
 
 

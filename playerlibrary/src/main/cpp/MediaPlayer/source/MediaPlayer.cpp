@@ -31,6 +31,8 @@ MediaPlayer::MediaPlayer() {
 
 MediaPlayer::~MediaPlayer() {
     avformat_network_deinit();
+    stop();
+    mMutex.lock();
     if (playerCallback != NULL) {
         delete playerCallback;
         playerCallback = NULL;
@@ -68,6 +70,7 @@ MediaPlayer::~MediaPlayer() {
         av_freep(&url);
         url = NULL;
     }
+    mMutex.unlock();
     ALOGD("MediaPlayer Destructor");
 }
 
@@ -81,8 +84,9 @@ void MediaPlayer::setDataSource(const char *url) {
     this->url = av_strdup(url);
 }
 
-void MediaPlayer::setSurface(ANativeWindow *surface) {
-    mediaSync->setSurface(surface);
+void MediaPlayer::setVideoDevice(VideoDevice *videoDevice) {
+    Mutex::Autolock lock(mMutex);
+    mediaSync->setVideoDevice(videoDevice);
 }
 
 void MediaPlayer::prepare() {
@@ -122,16 +126,16 @@ void MediaPlayer::stop() {
     playerState->abortRequest = 1;
     mCondition.signal();
     mMutex.unlock();
+    if (readThread != NULL) {
+        readThread->join();
+        delete readThread;
+        readThread = NULL;
+    }
     if (audioDevice) {
         audioDevice->stop();
     }
     if (mediaSync) {
         mediaSync->stop();
-    }
-    if (readThread != NULL) {
-        readThread->join();
-        delete readThread;
-        readThread = NULL;
     }
 }
 
@@ -247,6 +251,13 @@ int MediaPlayer::readPackets() {
             scan_all_pmts_set = 1;
         }
 
+        // 设置rtmp/rtsp的超时值
+        if (av_stristart(url, "rtmp", NULL) || av_stristart(url, "rtsp", NULL)) {
+            // There is total different meaning for 'timeout' option in rtmp
+            av_log(NULL, AV_LOG_WARNING, "remove 'timeout' option for rtmp.\n");
+            av_dict_set(&playerState->format_opts, "timeout", NULL, 0);
+        }
+
         // 打开文件
         ret = avformat_open_input(&pFormatCtx, url, NULL, &playerState->format_opts);
         if (ret < 0) {
@@ -274,10 +285,14 @@ int MediaPlayer::readPackets() {
 
         // 查找媒体流信息
         ret = avformat_find_stream_info(pFormatCtx, opts);
-        for (int i = 0; i < pFormatCtx->nb_streams; i++) {
-            av_dict_free(&opts[i]);
+        if (opts != NULL) {
+            for (int i = 0; i < pFormatCtx->nb_streams; i++) {
+                if (opts[i] != NULL) {
+                    av_dict_free(&opts[i]);
+                }
+            }
+            av_freep(&opts);
         }
-        av_freep(&opts);
 
         if (ret < 0) {
             av_log(NULL, AV_LOG_WARNING,
@@ -315,8 +330,11 @@ int MediaPlayer::readPackets() {
                        url, (double)timestamp / AV_TIME_BASE);
             }
         }
-        // 判断是否实时流
+        // 判断是否实时流，判断是否需要设置无限缓冲区
         playerState->realTime = isRealTime(pFormatCtx);
+        if (playerState->infiniteBuffer < 0 && playerState->realTime) {
+            playerState->infiniteBuffer = 1;
+        }
 
         // 查找媒体流信息
         int audioIndex = -1;
@@ -425,6 +443,14 @@ int MediaPlayer::readPackets() {
         }
     }
 
+    if (playerState->syncType == AV_SYNC_AUDIO) {
+        videoDecoder->setMasterClock(mediaSync->getAudioClock());
+    } else if (playerState->syncType == AV_SYNC_VIDEO) {
+        videoDecoder->setMasterClock(mediaSync->getVideoClock());
+    } else {
+        videoDecoder->setMasterClock(mediaSync->getExternalClock());
+    }
+
     // 开始同步
     mediaSync->start(videoDecoder, audioDecoder);
 
@@ -490,6 +516,7 @@ int MediaPlayer::readPackets() {
             }
             attachmentRequest = 1;
             playerState->seekRequest = 0;
+            eof = 0;
         }
 
         // 取得封面数据包
@@ -507,10 +534,10 @@ int MediaPlayer::readPackets() {
         }
 
         // 如果队列中存在足够的数据包，则等待消耗
-        if ((audioDecoder ? audioDecoder->getPacketSize() : 0) > MAX_PACKET_SIZE) {
-            continue;
-        }
-        if ((videoDecoder ? videoDecoder->getPacketSize() : 0) > MAX_PACKET_SIZE) {
+        // 备注：这里要等待一定时长的缓冲队列，要不然会导致OpenSLES播放音频出现卡顿等现象
+        if (playerState->infiniteBuffer < 1 &&
+            ((audioDecoder ? audioDecoder->getMemorySize() : 0) + (videoDecoder ? videoDecoder->getMemorySize() : 0) > MAX_QUEUE_SIZE
+             || (!audioDecoder || audioDecoder->hasEnoughPackets()) && (!videoDecoder || videoDecoder->hasEnoughPackets()))) {
             continue;
         }
 
@@ -684,11 +711,6 @@ int MediaPlayer::prepareDecoder(int streamIndex) {
             case AVMEDIA_TYPE_AUDIO: {
                 audioDecoder = new AudioDecoder(avctx, pFormatCtx->streams[streamIndex],
                                                 streamIndex, playerState);
-                if ((pFormatCtx->iformat->flags
-                     & (AVFMT_NOBINSEARCH | AVFMT_NOGENSEARCH | AVFMT_NO_BYTE_SEEK))
-                    && !pFormatCtx->iformat->read_seek) {
-                    audioDecoder->initTimeBase();
-                }
                 break;
             }
 
@@ -729,7 +751,7 @@ int MediaPlayer::openAudioDevice(int64_t wanted_channel_layout, int wanted_nb_ch
     AudioDeviceSpec wanted_spec, spec;
     const int next_nb_channels[] = {0, 0, 1, 6, 2, 6, 4, 6};
     const int next_sample_rates[] = {44100, 48000};
-    int next_sample_rate_idx = 0;
+    int next_sample_rate_idx = FF_ARRAY_ELEMS(next_sample_rates) - 1;
     if (wanted_nb_channels != av_get_channel_layout_nb_channels(wanted_channel_layout)
         || !wanted_channel_layout) {
         wanted_channel_layout = av_get_default_channel_layout(wanted_nb_channels);
@@ -742,9 +764,8 @@ int MediaPlayer::openAudioDevice(int64_t wanted_channel_layout, int wanted_nb_ch
         av_log(NULL, AV_LOG_ERROR, "Invalid sample rate or channel count!\n");
         return -1;
     }
-    while (next_sample_rate_idx < (FF_ARRAY_ELEMS(next_sample_rates) - 1)
-           && next_sample_rates[next_sample_rate_idx] >= wanted_spec.freq) {
-        next_sample_rate_idx++;
+    while (next_sample_rate_idx && next_sample_rates[next_sample_rate_idx] >= wanted_spec.freq) {
+        next_sample_rate_idx--;
     }
 
     wanted_spec.format = AV_SAMPLE_FMT_S16;
@@ -794,6 +815,7 @@ int MediaPlayer::openAudioDevice(int64_t wanted_channel_layout, int wanted_nb_ch
 
 void MediaPlayer::pcmQueueCallback(uint8_t *stream, int len) {
     if (!audioResampler) {
+        memset(stream, 0, sizeof(len));
         return;
     }
     audioResampler->pcmQueueCallback(stream, len);

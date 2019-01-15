@@ -12,32 +12,38 @@ if(CMAKE_COMPILER_IS_CLANG)
 endif(CMAKE_COMPILER_IS_CLANG)
 
 # 添加头文件
-include_directories( include
-                     SoundTouch )
+#include_directories( include )
+
 # 添加源文件
 add_library( soundtouch
 
              SHARED
 
              # library
-             source/AAFilter.cpp
-             source/BPMDetect.cpp
-             source/cpu_detect_x86.cpp
-             source/FIFOSampleBuffer.cpp
-             source/FIRFilter.cpp
-             source/InterpolateCubic.cpp
-             source/InterpolateLinear.cpp
-             source/InterpolateShannon.cpp
-             source/mmx_optimized.cpp
-             source/PeakFinder.cpp
-             source/RateTransposer.cpp
-             source/SoundTouch.cpp
-             source/sse_optimized.cpp
-             source/TDStretch.cpp
+             source/SoundTouch/AAFilter.cpp
+             source/SoundTouch/BPMDetect.cpp
+             source/SoundTouch/cpu_detect_x86.cpp
+             source/SoundTouch/FIFOSampleBuffer.cpp
+             source/SoundTouch/FIRFilter.cpp
+             source/SoundTouch/InterpolateCubic.cpp
+             source/SoundTouch/InterpolateLinear.cpp
+             source/SoundTouch/InterpolateShannon.cpp
+             source/SoundTouch/mmx_optimized.cpp
+             source/SoundTouch/PeakFinder.cpp
+             source/SoundTouch/RateTransposer.cpp
+             source/SoundTouch/SoundTouch.cpp
+             source/SoundTouch/sse_optimized.cpp
+             source/SoundTouch/TDStretch.cpp
 
              # wrapper
              SoundTouchWrapper.cpp )
 
+target_include_directories( soundtouch
+
+                            PRIVATE
+
+                            include
+                            source/SoundTouch )
 # 链接静态库
 target_link_libraries( soundtouch
 

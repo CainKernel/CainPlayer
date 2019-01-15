@@ -19,11 +19,6 @@ AudioDecoder::~AudioDecoder() {
     ALOGI("AudioDecoder destructor");
 }
 
-void AudioDecoder::initTimeBase() {
-    start_pts = pStream->start_time;
-    start_pts_tb = pStream->time_base;
-}
-
 int AudioDecoder::getAudioFrame(AVFrame *frame) {
     int got_frame = 0;
     int ret = 0;
@@ -55,11 +50,6 @@ int AudioDecoder::getAudioFrame(AVFrame *frame) {
     } while (!got_frame);
 
     return got_frame;
-}
-
-void AudioDecoder::flush() {
-    MediaDecoder::flush();
-    ALOGD("audio decoder flush");
 }
 
 

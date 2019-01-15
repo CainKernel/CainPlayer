@@ -15,10 +15,6 @@ public:
 
     virtual ~AudioDecoder();
 
-    void initTimeBase();
-
-    void flush() override;
-
     int getAudioFrame(AVFrame *frame);
 
 private:

@@ -10,8 +10,7 @@
 #include <decoder/VideoDecoder.h>
 #include <decoder/AudioDecoder.h>
 
-#include <android/native_window.h>
-#include <android/native_window_jni.h>
+#include <device/VideoDevice.h>
 
 /**
  * 视频同步器
@@ -27,8 +26,8 @@ public:
 
     void stop();
 
-    // 设置Surface
-    void setSurface(ANativeWindow *window);
+    // 设置视频输出设备
+    void setVideoDevice(VideoDevice *device);
 
     // 设置帧最大间隔
     void setMaxDuration(double maxDuration);
@@ -48,6 +47,12 @@ public:
     double getMasterClock();
 
     void run() override;
+
+    MediaClock *getAudioClock();
+
+    MediaClock *getVideoClock();
+
+    MediaClock *getExternalClock();
 
 private:
     void refreshVideo(double *remaining_time);
@@ -80,10 +85,11 @@ private:
     int frameTimerRefresh;                  // 刷新时钟
     double frameTimer;                      // 视频时钟
 
-    AVFrame *pFrameRGBA;
+    VideoDevice *videoDevice;               // 视频输出设备
+
+    AVFrame *pFrameARGB;
     uint8_t *mBuffer;
     SwsContext *swsContext;
-    ANativeWindow *window = NULL;
 };
 
 

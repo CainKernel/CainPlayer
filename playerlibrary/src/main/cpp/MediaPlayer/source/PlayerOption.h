@@ -22,11 +22,13 @@ extern "C" {
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/avstring.h>
 };
 
 #define VIDEO_QUEUE_SIZE 3
 
-#define MAX_PACKET_SIZE 20
+#define MAX_QUEUE_SIZE (15 * 1024 * 1024)
+#define MIN_FRAMES 25
 
 #define AUDIO_MIN_BUFFER_SIZE 512
 
@@ -66,42 +68,6 @@ typedef enum {
 } SyncType;
 
 /**
- * 音频参数
- */
-typedef struct AudioParams {
-    int freq;
-    int channels;
-    int64_t channel_layout;
-    enum AVSampleFormat fmt;
-    int frame_size;
-    int bytes_per_sec;
-} AudioParams;
-
-/**
- * 音频重采样状态结构体
- */
-typedef struct AudioState {
-    double audioClock;                      // 音频时钟
-    double audio_diff_cum;
-    double audio_diff_avg_coef;
-    double audio_diff_threshold;
-    int audio_diff_avg_count;
-    int audio_hw_buf_size;
-    uint8_t *outputBuffer;                  // 输出缓冲大小
-    uint8_t *resampleBuffer;                // 重采样大小
-    short *soundTouchBuffer;                // SoundTouch缓冲
-    unsigned int bufferSize;                // 缓冲大小
-    unsigned int resampleSize;              // 重采样大小
-    unsigned int soundTouchBufferSize;      // SoundTouch处理后的缓冲大小大小
-    int bufferIndex;
-    int writeBufferSize;                    // 写入大小
-    SwrContext *swr_ctx;                    // 音频转码上下文
-    int64_t audio_callback_time;            // 音频回调时间
-    AudioParams audioParamsSrc;             // 音频原始参数
-    AudioParams audioParamsTarget;          // 音频目标参数
-} AudioState;
-
-/**
  * 播放器状态结构体
  */
 typedef struct PlayerState {
@@ -121,6 +87,7 @@ typedef struct PlayerState {
     int64_t startTime;              // 播放起始位置
     int64_t duration;               // 播放时长
     int realTime;                   // 判断是否实时流
+    int infiniteBuffer;             // 是否无限缓冲区，默认为-1
     int audioDisable;               // 是否禁止音频流
     int videoDisable;               // 是否禁止视频流
     int displayDisable;             // 是否禁止显示
@@ -175,6 +142,7 @@ inline void resetPlayerState(PlayerState *state) {
     state->startTime = AV_NOPTS_VALUE;
     state->duration = AV_NOPTS_VALUE;
     state->realTime = 0;
+    state->infiniteBuffer = -1;
     state->audioDisable = 0;
     state->videoDisable = 0;
     state->displayDisable = 0;

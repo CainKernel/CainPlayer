@@ -200,30 +200,5 @@ inline void Thread::run() {
     // do nothing
 }
 
-inline int ThreadSetPriority(ThreadPriority priority) {
-    if (priority == Priority_Default) {
-        return 0;
-    }
-    struct sched_param sched;
-    int policy;
-    pthread_t thread = pthread_self();
-    if (pthread_getschedparam(thread, &policy, &sched) < 0) {
-        return -1;
-    }
-    if (priority == Priority_Low) {
-        sched.sched_priority = sched_get_priority_min(policy);
-    } else if (priority == Priority_High) {
-        sched.sched_priority = sched_get_priority_max(policy);
-    } else {
-        int min_priority = sched_get_priority_min(policy);
-        int max_priority = sched_get_priority_max(policy);
-        sched.sched_priority = (min_priority + (max_priority - min_priority) / 2);
-    }
-    if (pthread_setschedparam(thread, policy, &sched) < 0) {
-        return -1;
-    }
-    return 0;
-}
-
 
 #endif //THREAD_H

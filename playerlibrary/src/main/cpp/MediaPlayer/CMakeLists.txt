@@ -10,8 +10,14 @@ else ()
   set(GLES-lib GLESv3)
 endif (${ANDROID_PLATFORM_LEVEL} LESS 11)
 
+# 添加 soundtouch 动态库
+set(soundtouch_dir ../SoundTouch)
+add_subdirectory(${soundtouch_dir} soundtouch)
+
 # 添加头文件路径
-include_directories( source )
+include_directories( source
+                     ${soundtouch_dir} )
+
 # 添加源文件
 add_library( media_player
 
@@ -33,6 +39,12 @@ add_library( media_player
 
              source/queue/FrameQueue.cpp
              source/queue/PacketQueue.cpp
+
+             source/renderer/EglHelper.cpp
+             source/renderer/GLUtils.cpp
+             source/renderer/RenderShaders.cpp
+             source/renderer/RGBARenderer.cpp
+             source/renderer/YUV420PRenderer.cpp
 
              source/sync/MediaClock.cpp
              source/sync/MediaSync.cpp

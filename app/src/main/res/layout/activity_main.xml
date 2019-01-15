@@ -17,6 +17,12 @@
             android:layout_height="wrap_content"
             android:text="选择视频" />
 
+        <Button
+            android:id="@+id/btn_hkstv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="香港卫视" />
+
     </LinearLayout>
 
 </RelativeLayout>

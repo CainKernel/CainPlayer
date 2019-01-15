@@ -6,7 +6,7 @@
 #define CAINMUSICPLAYER_SOUNDTOUCHWRAPPER_H
 
 #include <stdint.h>
-#include <SoundTouch.h>
+#include "include/SoundTouch.h"
 
 using namespace std;
 
