@@ -41,15 +41,22 @@ void MediaDecoder::stop() {
 }
 
 void MediaDecoder::flush() {
-    packetQueue->flush();
+    if (packetQueue) {
+        packetQueue->flush();
+    }
 }
 
 int MediaDecoder::pushPacket(AVPacket *pkt) {
-    return packetQueue->pushPacket(pkt);
+    if (packetQueue) {
+        return packetQueue->pushPacket(pkt);
+    }
 }
 
 int MediaDecoder::pushNullPacket() {
-    return packetQueue->pushNullPacket(streamIndex);
+    if (packetQueue != NULL) {
+        return packetQueue->pushNullPacket(streamIndex);
+    }
+    return -1;
 }
 
 int MediaDecoder::getPacketSize() {
@@ -69,7 +76,7 @@ AVCodecContext *MediaDecoder::getCodecContext() {
 }
 
 int MediaDecoder::getMemorySize() {
-    return packetQueue ? 0 : packetQueue->getSize();
+    return packetQueue ? packetQueue->getSize() : 0;
 }
 
 int MediaDecoder::hasEnoughPackets() {
