@@ -3,6 +3,7 @@
 //
 
 #include <renderer/YUV420PRenderer.h>
+#include <renderer/BGRARenderer.h>
 #include "GLESDevice.h"
 
 GLESDevice::GLESDevice() {
@@ -136,6 +137,8 @@ void GLESDevice::onInitTexture(int width, int height, TextureFormat format, Blen
     mVideoTexture->direction = FLIP_NONE;
     if (format == FMT_YUV420P) {
         mRenderer = new YUV420PRenderer();
+    } else if (format == FMT_ARGB) {
+        mRenderer = new BGRARenderer();
     } else {
         mRenderer = NULL;
     }

@@ -43,6 +43,7 @@ add_library( media_player
              source/renderer/EglHelper.cpp
              source/renderer/GLUtils.cpp
              source/renderer/RenderShaders.cpp
+             source/renderer/BGRARenderer.cpp
              source/renderer/YUV420PRenderer.cpp
 
              source/sync/MediaClock.cpp
