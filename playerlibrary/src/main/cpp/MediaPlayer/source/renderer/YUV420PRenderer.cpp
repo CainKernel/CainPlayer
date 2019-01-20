@@ -78,13 +78,14 @@ int YUV420PRenderer::onInit(Texture *texture) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glUniform1i(textureHandle[i], i);
     }
 
     mInited = true;
     return 0;
 }
 
-GLboolean YUV420PRenderer::renderTexture(Texture *texture) {
+GLboolean YUV420PRenderer::uploadTexture(Texture *texture) {
     if (!texture || programHandle == 0) {
         return GL_FALSE;
     }
@@ -93,14 +94,8 @@ GLboolean YUV420PRenderer::renderTexture(Texture *texture) {
     glUseProgram(programHandle);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // 绑定顶点坐标
-    glVertexAttribPointer(positionHandle, 2, GL_FLOAT, GL_FALSE, 0, vertices);
-    glEnableVertexAttribArray(positionHandle);
-    // 绑定纹理坐标
-    glVertexAttribPointer(texCoordHandle, 2, GL_FLOAT, GL_FALSE, 0, texVetrices);
-    glEnableVertexAttribArray(texCoordHandle);
-    const GLsizei heights[3] = { texture->height, texture->height / 2, texture->height / 2};
     // 更新纹理数据
+    const GLsizei heights[3] = { texture->height, texture->height / 2, texture->height / 2};
     for (int i = 0; i < 3; ++i) {
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, textures[i]);
@@ -115,6 +110,17 @@ GLboolean YUV420PRenderer::renderTexture(Texture *texture) {
                      texture->pixels[i]);
         glUniform1i(textureHandle[i], i);
     }
+
+    return 0;
+}
+
+GLboolean YUV420PRenderer::renderTexture(Texture *texture) {
+    // 绑定顶点坐标
+    glVertexAttribPointer(positionHandle, 2, GL_FLOAT, GL_FALSE, 0, vertices);
+    glEnableVertexAttribArray(positionHandle);
+    // 绑定纹理坐标
+    glVertexAttribPointer(texCoordHandle, 2, GL_FLOAT, GL_FALSE, 0, texVetrices);
+    glEnableVertexAttribArray(texCoordHandle);
     // 绘制
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     // 解绑

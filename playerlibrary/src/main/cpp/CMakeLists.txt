@@ -12,18 +12,18 @@ if(CMAKE_COMPILER_IS_CLANG)
 endif(CMAKE_COMPILER_IS_CLANG)
 
 # 添加include目录路径
-include_directories( src/main/cpp/common
-                     src/main/cpp/include )
+include_directories( common
+                     include )
 
 # 添加ffmpeg库
 add_library( ffmpeg SHARED IMPORTED )
 set_target_properties( ffmpeg
                        PROPERTIES IMPORTED_LOCATION
-                       ${CMAKE_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}/libffmpeg.so )
+                       ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libffmpeg.so )
 
 # Metadata库
-add_subdirectory(${CMAKE_SOURCE_DIR}/src/main/cpp/Metadata)
+add_subdirectory(${CMAKE_SOURCE_DIR}/Metadata)
 
 # 媒体播放器
-add_subdirectory(${CMAKE_SOURCE_DIR}/src/main/cpp/MediaPlayer)
+add_subdirectory(${CMAKE_SOURCE_DIR}/MediaPlayer)
 

@@ -139,7 +139,10 @@ void MediaSync::run() {
     while (true) {
 
         if (abortRequest || playerState->abortRequest) {
-            break;
+            if (videoDevice != NULL) {
+                videoDevice->terminate();
+            }
+            return;
         }
 
         if (remaining_time > 0.0) {

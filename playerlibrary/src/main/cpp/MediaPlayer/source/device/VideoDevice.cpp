@@ -12,19 +12,7 @@ VideoDevice::~VideoDevice() {
 
 }
 
-void VideoDevice::start() {
-
-}
-
-void VideoDevice::pause() {
-
-}
-
-void VideoDevice::resume() {
-
-}
-
-void VideoDevice::stop() {
+void VideoDevice::terminate() {
 
 }
 
@@ -43,8 +31,4 @@ int VideoDevice::onUpdateARGB(uint8_t *rgba, int pitch) {
 
 int VideoDevice::onRequestRender(FlipDirection direction) {
     return 0;
-}
-
-void VideoDevice::run() {
-    // do nothing
 }

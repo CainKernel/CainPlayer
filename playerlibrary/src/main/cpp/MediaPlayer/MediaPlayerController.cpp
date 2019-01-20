@@ -29,7 +29,6 @@ Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetup(JNIEnv *env, jobject 
     }
     mediaPlayer->setPlayerCallback(new JniMediaPlayerCallback(javaVM, env, &instance));
     videoDevice = new GLESDevice();
-    videoDevice->start();
 }
 
 extern "C"
@@ -43,7 +42,6 @@ Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeRelease(JNIEnv *env, jobjec
     }
 
     if (videoDevice != NULL) {
-        videoDevice->stop();
         delete videoDevice;
         videoDevice = NULL;
     }

@@ -125,12 +125,12 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
         if (mMediaPlayer != null) {
             mMediaPlayer.stop();
             mMediaPlayer.release();
             mMediaPlayer = null;
         }
+        super.onDestroy();
     }
 
     @Override

@@ -34,14 +34,9 @@ android {
         }
     }
 
-    sourceSets.main {
-        jniLibs.srcDirs = ['src/main/jniLibs']
-        jni.srcDirs = []
-    }
-
     externalNativeBuild {
         cmake {
-            path "CMakeLists.txt"
+            path "src/main/cpp/CMakeLists.txt"
         }
     }
 }

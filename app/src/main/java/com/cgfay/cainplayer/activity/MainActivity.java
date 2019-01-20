@@ -83,7 +83,6 @@ public class MainActivity extends AppCompatActivity {
                             Intent intent = new Intent(MainActivity.this, AVMediaPlayerActivity.class);
                             intent.putExtra(AVMediaPlayerActivity.PATH, pathList.get(0));
                             startActivity(intent);
-                            finish();
                         }
                     }
                 })

@@ -81,7 +81,7 @@ int BGRARenderer::onInit(Texture *texture) {
     return 0;
 }
 
-GLboolean BGRARenderer::renderTexture(Texture *texture) {
+GLboolean BGRARenderer::uploadTexture(Texture *texture) {
     if (!texture || programHandle == 0) {
         return GL_FALSE;
     }
@@ -89,13 +89,6 @@ GLboolean BGRARenderer::renderTexture(Texture *texture) {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glUseProgram(programHandle);
     glClear(GL_COLOR_BUFFER_BIT);
-
-    // 绑定顶点坐标
-    glVertexAttribPointer(positionHandle, 2, GL_FLOAT, GL_FALSE, 0, vertices);
-    glEnableVertexAttribArray(positionHandle);
-    // 绑定纹理坐标
-    glVertexAttribPointer(texCoordHandle, 2, GL_FLOAT, GL_FALSE, 0, texVetrices);
-    glEnableVertexAttribArray(texCoordHandle);
 
     // 更新纹理数据
     glActiveTexture(GL_TEXTURE0);
@@ -110,6 +103,22 @@ GLboolean BGRARenderer::renderTexture(Texture *texture) {
                  GL_UNSIGNED_BYTE,
                  texture->pixels[0]);
     glUniform1i(textureHandle[0], 0);
+
+    return GL_TRUE;
+}
+
+GLboolean BGRARenderer::renderTexture(Texture *texture) {
+    if (!texture || programHandle == 0) {
+        return GL_FALSE;
+    }
+
+    // 绑定顶点坐标
+    glVertexAttribPointer(positionHandle, 2, GL_FLOAT, GL_FALSE, 0, vertices);
+    glEnableVertexAttribArray(positionHandle);
+    // 绑定纹理坐标
+    glVertexAttribPointer(texCoordHandle, 2, GL_FLOAT, GL_FALSE, 0, texVetrices);
+    glEnableVertexAttribArray(texCoordHandle);
+
     // 绘制
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     // 解绑

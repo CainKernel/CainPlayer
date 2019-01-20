@@ -18,6 +18,8 @@ public:
 
     int onInit(Texture *texture) override;
 
+    GLboolean uploadTexture(Texture *texture) override;
+
     GLboolean renderTexture(Texture *texture) override;
 
 private:

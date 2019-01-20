@@ -71,6 +71,8 @@ public:
 
     virtual int onInit(Texture *texture) = 0;
 
+    virtual GLboolean uploadTexture(Texture *texture) = 0;
+
     virtual GLboolean renderTexture(Texture *texture) = 0;
 
 protected:
