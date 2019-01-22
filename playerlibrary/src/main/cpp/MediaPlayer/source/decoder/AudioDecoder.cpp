@@ -46,6 +46,17 @@ int AudioDecoder::getAudioFrame(AVFrame *frame) {
             continue;
         } else {
             got_frame = 1;
+            // 这里要重新计算frame的pts 否则会导致网络视频出现pts 对不上的情况
+            AVRational tb = (AVRational){1, frame->sample_rate};
+            if (frame->pts != AV_NOPTS_VALUE) {
+                frame->pts = av_rescale_q(frame->pts, av_codec_get_pkt_timebase(pCodecCtx), tb);
+            } else if (next_pts != AV_NOPTS_VALUE) {
+                frame->pts = av_rescale_q(next_pts, next_pts_tb, tb);
+            }
+            if (frame->pts != AV_NOPTS_VALUE) {
+                next_pts = frame->pts + frame->nb_samples;
+                next_pts_tb = tb;
+            }
         }
     } while (!got_frame);
 

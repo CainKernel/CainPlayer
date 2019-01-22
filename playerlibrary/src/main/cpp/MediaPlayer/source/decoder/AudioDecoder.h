@@ -19,6 +19,8 @@ public:
 
 private:
     AVPacket *packet;
+    int64_t next_pts;
+    AVRational next_pts_tb;
 };
 
 
