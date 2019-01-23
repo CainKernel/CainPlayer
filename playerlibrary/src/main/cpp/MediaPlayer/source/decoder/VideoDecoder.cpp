@@ -10,7 +10,6 @@ VideoDecoder::VideoDecoder(AVFormatContext *pFormatCtx, AVCodecContext *avctx,
     this->pFormatCtx = pFormatCtx;
     frameQueue = new FrameQueue(VIDEO_QUEUE_SIZE, 1);
     decodeThread = NULL;
-    frame = av_frame_alloc();
     masterClock = NULL;
 }
 
@@ -23,11 +22,6 @@ VideoDecoder::~VideoDecoder() {
         frameQueue->flush();
         delete frameQueue;
         frameQueue = NULL;
-    }
-    if (frame) {
-        av_frame_free(&frame);
-        av_freep(&frame);
-        frame = NULL;
     }
     masterClock = NULL;
     mMutex.unlock();

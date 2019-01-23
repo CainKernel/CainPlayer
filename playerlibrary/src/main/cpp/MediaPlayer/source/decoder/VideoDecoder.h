@@ -40,7 +40,6 @@ private:
     FrameQueue *frameQueue;         // 帧队列
 
     Thread *decodeThread;           // 解码线程
-    AVFrame *frame;
     MediaClock *masterClock;        // 主时钟
 };
 

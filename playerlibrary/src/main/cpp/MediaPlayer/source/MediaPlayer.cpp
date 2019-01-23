@@ -443,12 +443,14 @@ int MediaPlayer::readPackets() {
         }
     }
 
-    if (playerState->syncType == AV_SYNC_AUDIO) {
-        videoDecoder->setMasterClock(mediaSync->getAudioClock());
-    } else if (playerState->syncType == AV_SYNC_VIDEO) {
-        videoDecoder->setMasterClock(mediaSync->getVideoClock());
-    } else {
-        videoDecoder->setMasterClock(mediaSync->getExternalClock());
+    if (videoDecoder) {
+        if (playerState->syncType == AV_SYNC_AUDIO) {
+            videoDecoder->setMasterClock(mediaSync->getAudioClock());
+        } else if (playerState->syncType == AV_SYNC_VIDEO) {
+            videoDecoder->setMasterClock(mediaSync->getVideoClock());
+        } else {
+            videoDecoder->setMasterClock(mediaSync->getExternalClock());
+        }
     }
 
     // 开始同步
