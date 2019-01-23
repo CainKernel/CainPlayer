@@ -166,9 +166,6 @@ void MediaSync::refreshVideo(double *remaining_time) {
         checkExternalClockSpeed();
     }
 
-    Frame *af = (Frame *) av_mallocz(sizeof(Frame));
-    af->frame = av_frame_alloc();
-
     for (;;) {
 
         if (abortRequest || playerState->abortRequest || !videoDecoder) {
