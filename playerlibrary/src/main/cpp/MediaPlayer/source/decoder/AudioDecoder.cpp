@@ -40,6 +40,8 @@ int AudioDecoder::getAudioFrame(AVFrame *frame) {
             continue;
         }
         ret = avcodec_receive_frame(pCodecCtx, frame);
+        // 释放数据包的引用，防止内存泄漏
+        av_packet_unref(packet);
         if (ret < 0) {
             av_frame_unref(frame);
             got_frame = 0;

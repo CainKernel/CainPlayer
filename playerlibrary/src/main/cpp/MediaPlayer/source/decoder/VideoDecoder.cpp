@@ -176,6 +176,10 @@ int VideoDecoder::decodeVideo() {
             // 入队帧
             frameQueue->pushFrame();
         }
+
+        // 释放数据包和缓冲帧的引用，防止内存泄漏
+        av_frame_unref(frame);
+        av_packet_unref(packet);
     }
 
     av_frame_free(&frame);

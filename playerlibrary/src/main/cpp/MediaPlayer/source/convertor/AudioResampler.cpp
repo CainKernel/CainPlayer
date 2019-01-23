@@ -144,7 +144,6 @@ int AudioResampler::audioSynchronize(int nbSamples) {
 int AudioResampler::audioFrameResample() {
     int data_size, resampled_data_size;
     int64_t dec_channel_layout;
-    av_unused double audio_clock0;
     int wanted_nb_samples;
     int translate_time = 1;
     int ret = -1;
@@ -277,6 +276,9 @@ int AudioResampler::audioFrameResample() {
     } else {
         audioState->audioClock = NAN;
     }
+
+    // 使用完成释放引用，防止内存泄漏
+    av_frame_unref(frame);
 
     return resampled_data_size;
 }
