@@ -19,7 +19,7 @@ MediaSync::MediaSync(PlayerState *playerState) {
     maxFrameDuration = 10.0;
     frameTimerRefresh = 1;
     frameTimer = 0;
-    abortRequest = 0;
+    mExit = true;
 
     videoDevice = NULL;
     swsContext = NULL;
@@ -52,7 +52,7 @@ void MediaSync::start(VideoDecoder *videoDecoder, AudioDecoder *audioDecoder) {
     mMutex.lock();
     this->videoDecoder = videoDecoder;
     this->audioDecoder = audioDecoder;
-    abortRequest = 0;
+    mExit = false;
     mCondition.signal();
     mMutex.unlock();
     if (videoDecoder && !syncThread) {
@@ -63,8 +63,9 @@ void MediaSync::start(VideoDecoder *videoDecoder, AudioDecoder *audioDecoder) {
 
 void MediaSync::stop() {
     mMutex.lock();
-    abortRequest = 1;
-    mCondition.signal();
+    while (!mExit) {
+        mCondition.wait(mMutex);
+    }
     mMutex.unlock();
     if (syncThread) {
         syncThread->join();
@@ -138,7 +139,7 @@ void MediaSync::run() {
     double remaining_time = 0.0;
     while (true) {
 
-        if (abortRequest || playerState->abortRequest) {
+        if (playerState->abortRequest) {
             if (videoDevice != NULL) {
                 videoDevice->terminate();
             }
@@ -149,26 +150,28 @@ void MediaSync::run() {
             av_usleep((int64_t) (remaining_time * 1000000.0));
         }
         remaining_time = REFRESH_RATE;
-        if (!abortRequest && (!playerState->pauseRequest || forceRefresh)) {
+        if (!playerState->pauseRequest || forceRefresh) {
             refreshVideo(&remaining_time);
         }
     }
 
     ALOGD("video refresh thread exit!");
+    mExit = true;
+    mCondition.signal();
 }
 
 void MediaSync::refreshVideo(double *remaining_time) {
     double time;
 
     // 检查外部时钟
-    if (!abortRequest & !playerState->pauseRequest && playerState->realTime &&
+    if (!playerState->pauseRequest && playerState->realTime &&
         playerState->syncType == AV_SYNC_EXTERNAL) {
         checkExternalClockSpeed();
     }
 
     for (;;) {
 
-        if (abortRequest || playerState->abortRequest || !videoDecoder) {
+        if (playerState->abortRequest || !videoDecoder) {
             break;
         }
 

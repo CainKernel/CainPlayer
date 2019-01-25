@@ -66,8 +66,8 @@ private:
     void renderVideo();
 
 private:
-    int abortRequest;                       // 强制终止
     PlayerState *playerState;               // 播放器状态
+    bool mExit;
 
     MediaClock *audioClock;                 // 音频时钟
     MediaClock *videoClock;                 // 视频时钟
