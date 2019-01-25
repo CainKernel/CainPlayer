@@ -1,5 +1,8 @@
 package com.cgfay.media.activity;
 
+import android.graphics.Bitmap;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -9,13 +12,18 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
+import android.widget.TextView;
 
+import com.cgfay.media.Medadata.AVMediaMetadataRetriever;
 import com.cgfay.media.MediaPlayer.AVMediaPlayer;
 import com.cgfay.media.R;
 import com.cgfay.media.widget.AspectRatioLayout;
 
-public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnClickListener, SurfaceHolder.Callback {
+public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnClickListener,
+        SurfaceHolder.Callback, SeekBar.OnSeekBarChangeListener {
 
     private static final String TAG = "AVMediaPlayerActivity";
 
@@ -26,31 +34,41 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
     private boolean visible = false;
     private LinearLayout mLayoutOperation;
     private Button mBtnPause;
-    private Button mBtnPlay;
+    private SeekBar mSeekBar;
+    private ImageView mImageCover;
+    private TextView mTextMetadata;
 
     private AspectRatioLayout mLayoutAspectRatio;
     private SurfaceView mSurfaceView;
 
     private AVMediaPlayer mMediaPlayer;
 
+    private Handler mMainHandler;
+
+    private AVMediaMetadataRetriever mMetadataRetriever;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_media_player);
         mPath = getIntent().getStringExtra(PATH);
+        mMainHandler = new Handler(Looper.getMainLooper());
         initView();
         initPlayer();
+        initMediaMetadataRetriever();
     }
 
     private void initView() {
         mLayoutAspectRatio = (AspectRatioLayout) findViewById(R.id.layout_aspect_ratio);
         mLayoutOperation = (LinearLayout) findViewById(R.id.layout_operation);
-        mBtnPause = (Button) findViewById(R.id.btn_pause);
+        mBtnPause = (Button) findViewById(R.id.btn_pause_play);
         mBtnPause.setOnClickListener(this);
-        mBtnPlay = (Button) findViewById(R.id.btn_play);
-        mBtnPlay.setOnClickListener(this);
 
-        findViewById(R.id.btn_seek).setOnClickListener(this);
+        mSeekBar = findViewById(R.id.seekbar);
+        mSeekBar.setOnSeekBarChangeListener(this);
+
+        mImageCover = findViewById(R.id.iv_cover);
+        mTextMetadata = findViewById(R.id.tv_metadata);
 
         mSurfaceView = (SurfaceView) findViewById(R.id.surfaceView);
         mSurfaceView.getHolder().addCallback(this);
@@ -107,6 +125,29 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
         mMediaPlayer.prepare();
     }
 
+    private void initMediaMetadataRetriever() {
+        if (TextUtils.isEmpty(mPath)) {
+            return;
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // 异步截屏回调
+                mMetadataRetriever = new AVMediaMetadataRetriever();
+                mMetadataRetriever.setDataSource(mPath);
+                final Bitmap bitmap = mMetadataRetriever.getCoverPicture();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mImageCover.setImageBitmap(bitmap);
+                        mTextMetadata.setText(mMetadataRetriever.getMetadata().toString());
+                    }
+                });
+            }
+        }).start();
+
+    }
+
 //    @Override
 //    protected void onPause() {
 //        super.onPause();
@@ -136,12 +177,34 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
     @Override
     public void onClick(View v) {
         int id = v.getId();
-        if (id == R.id.btn_pause) {
-            mMediaPlayer.pause();
-        } else if (id == R.id.btn_play) {
-            mMediaPlayer.start();
-        } else if (id == R.id.btn_seek) {
-            mMediaPlayer.seekTo(20000);
+        if (id == R.id.btn_pause_play) {
+            if (mMediaPlayer.isPlaying()) {
+                mMediaPlayer.pause();
+                mBtnPause.setBackgroundResource(R.drawable.ic_player_play);
+            } else {
+                mMediaPlayer.resume();
+                mBtnPause.setBackgroundResource(R.drawable.ic_player_pause);
+            }
+        }
+    }
+
+    private int mProgress;
+    @Override
+    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+        if (fromUser) {
+            mProgress = progress;
+            Log.d(TAG, "onProgressChanged: progress = " + progress);
+        }
+    }
+
+    @Override
+    public void onStartTrackingTouch(SeekBar seekBar) {
+    }
+
+    @Override
+    public void onStopTrackingTouch(SeekBar seekBar) {
+        if (mMediaPlayer != null) {
+            mMediaPlayer.seekTo((mProgress * mMediaPlayer.getDuration()) / 100.0f * 1000);
         }
     }
 

@@ -192,13 +192,13 @@ public class AVMediaPlayer {
      * 获取时长
      * @return
      */
-    private native int getDuration();
+    public native int getDuration();
 
     /**
      * 是否正在播放
      * @return
      */
-    private native boolean isPlaying();
+    public native boolean isPlaying();
 
     /**
      * 获取视频宽度
