@@ -400,6 +400,8 @@ int MediaPlayer::readPackets() {
 
     // 出错返回
     if (ret < 0) {
+        mExit = true;
+        mCondition.signal();
         if (playerCallback) {
             playerCallback->onError(0x01, "prepare decoder failed!");
         }
@@ -509,8 +511,6 @@ int MediaPlayer::readPackets() {
                 }
                 if (videoDecoder) {
                     videoDecoder->flush();
-                    // 需要清空视频流的缓冲，防止seek之后会滞后的情况
-                    avcodec_flush_buffers(videoDecoder->getCodecContext());
                 }
 
                 // 更新外部时钟值

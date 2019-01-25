@@ -44,12 +44,15 @@ void MediaDecoder::flush() {
     if (packetQueue) {
         packetQueue->flush();
     }
+    // 定位时，音视频均需要清空缓冲区
+    avcodec_flush_buffers(getCodecContext());
 }
 
 int MediaDecoder::pushPacket(AVPacket *pkt) {
     if (packetQueue) {
         return packetQueue->pushPacket(pkt);
     }
+    return 0;
 }
 
 int MediaDecoder::pushNullPacket() {
