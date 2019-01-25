@@ -142,7 +142,7 @@ void MediaSync::run() {
             if (videoDevice != NULL) {
                 videoDevice->terminate();
             }
-            return;
+            break;
         }
 
         if (remaining_time > 0.0) {
@@ -195,6 +195,14 @@ void MediaSync::refreshVideo(double *remaining_time) {
             lastDuration = calculateDuration(lastFrame, currentFrame);
             // 根据上一次显示的时长，计算延时
             delay = calculateDelay(lastDuration);
+            // 处理超过延时阈值的情况
+            if (fabs(delay) > AV_SYNC_THRESHOLD_MAX) {
+                if (delay > 0) {
+                    delay = AV_SYNC_THRESHOLD_MAX;
+                } else {
+                    delay = 0;
+                }
+            }
             // 获取当前时间
             time = av_gettime_relative() / 1000000.0;
             if (isnan(frameTimer) || time < frameTimer) {

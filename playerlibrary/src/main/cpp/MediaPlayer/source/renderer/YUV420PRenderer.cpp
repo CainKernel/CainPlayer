@@ -115,6 +115,13 @@ GLboolean YUV420PRenderer::uploadTexture(Texture *texture) {
 }
 
 GLboolean YUV420PRenderer::renderTexture(Texture *texture) {
+    if (!texture || programHandle < 0) {
+        return GL_FALSE;
+    }
+    // TODO 后续添加缩放裁剪处理
+    if (texture->viewWidth != 0 && texture->viewHeight != 0) {
+        glViewport(0, 0, texture->viewWidth, texture->viewHeight);
+    }
     // 绑定顶点坐标
     glVertexAttribPointer(positionHandle, 2, GL_FLOAT, GL_FALSE, 0, vertices);
     glEnableVertexAttribArray(positionHandle);

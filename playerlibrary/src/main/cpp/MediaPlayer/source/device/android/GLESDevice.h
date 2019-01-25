@@ -49,9 +49,6 @@ private:
     bool mHaveEGLSurface;               // EGLSurface
     bool mHaveEGlContext;               // 释放资源
 
-    int mSurfaceWidth;                  // 显示宽度
-    int mSurfaceHeight;                 // 显示高度
-
     Texture *mVideoTexture;             // 视频纹理
     Renderer *mRenderer;                // 渲染器
 };

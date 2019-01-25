@@ -15,9 +15,6 @@ GLESDevice::GLESDevice() {
     mHaveEGlContext = false;
     mHasSurface = false;
 
-    mSurfaceWidth = 0;
-    mSurfaceHeight = 0;
-
     mVideoTexture = (Texture *) malloc(sizeof(Texture));
     memset(mVideoTexture, 0, sizeof(Texture));
     mRenderer = NULL;
@@ -42,8 +39,8 @@ void GLESDevice::surfaceCreated(ANativeWindow *window) {
 
 void GLESDevice::surfaceChanged(int width, int height) {
     mMutex.lock();
-    mSurfaceWidth = width;
-    mSurfaceHeight = height;
+    mVideoTexture->viewWidth = width;
+    mVideoTexture->viewHeight = height;
     mMutex.unlock();
 }
 

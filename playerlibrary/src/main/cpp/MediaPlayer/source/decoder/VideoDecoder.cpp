@@ -56,10 +56,13 @@ void VideoDecoder::stop() {
 }
 
 void VideoDecoder::flush() {
+    mMutex.lock();
     MediaDecoder::flush();
     if (frameQueue) {
         frameQueue->flush();
     }
+    mCondition.signal();
+    mMutex.unlock();
 }
 
 int VideoDecoder::getFrameSize() {

@@ -53,6 +53,8 @@ typedef enum {
 typedef struct Texture {
     int width;  // 纹理宽度
     int height; // 纹理高度
+    int viewWidth;  // Surface宽度
+    int viewHeight; // Surface高度
     BlendMode blendMode; // 混合模式，主要是方便后续添加字幕渲染之类的。字幕是绘制到图像上的，需要开启混合模式。
 
     FlipDirection direction;    // 翻转格式
