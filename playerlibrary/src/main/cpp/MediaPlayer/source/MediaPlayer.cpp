@@ -509,6 +509,8 @@ int MediaPlayer::readPackets() {
                 }
                 if (videoDecoder) {
                     videoDecoder->flush();
+                    // 需要清空视频流的缓冲，防止seek之后会滞后的情况
+                    avcodec_flush_buffers(videoDecoder->getCodecContext());
                 }
 
                 if (audioDevice) {
