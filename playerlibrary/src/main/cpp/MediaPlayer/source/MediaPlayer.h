@@ -90,6 +90,7 @@ private:
     MediaPlayerCallback *playerCallback;    // 播放器回调
     AudioDecoder *audioDecoder;             // 音频解码器
     VideoDecoder *videoDecoder;             // 视频解码器
+    bool mExit;
 
     // 解复用处理
     AVFormatContext *pFormatCtx;            // 解码上下文

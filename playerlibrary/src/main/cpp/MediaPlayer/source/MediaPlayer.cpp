@@ -27,6 +27,7 @@ MediaPlayer::MediaPlayer() {
     mediaSync = new MediaSync(playerState);
     audioResampler = NULL;
     readThread = NULL;
+    mExit = true;
 }
 
 MediaPlayer::~MediaPlayer() {
@@ -106,6 +107,7 @@ void MediaPlayer::start() {
     Mutex::Autolock lock(mMutex);
     playerState->abortRequest = 0;
     playerState->pauseRequest = 0;
+    mExit = false;
     mCondition.signal();
 }
 
@@ -125,6 +127,11 @@ void MediaPlayer::stop() {
     mMutex.lock();
     playerState->abortRequest = 1;
     mCondition.signal();
+    mMutex.unlock();
+    mMutex.lock();
+    while (!mExit) {
+        mCondition.wait(mMutex);
+    }
     mMutex.unlock();
     if (readThread != NULL) {
         readThread->join();
@@ -573,7 +580,6 @@ int MediaPlayer::readPackets() {
                     break;
                 }
             }
-            continue;
         } else {
             eof = 0;
         }
@@ -596,6 +602,10 @@ int MediaPlayer::readPackets() {
         }
     }
 
+    ALOGD("read packets thread exit!");
+    mExit = true;
+    mCondition.signal();
+
     if (ret < 0) {
         if (playerCallback) {
             playerCallback->onError(0x02, "error when reading packets!");
@@ -606,7 +616,6 @@ int MediaPlayer::readPackets() {
         }
     }
 
-    ALOGD("read packets thread exit!");
     return ret;
 }
 

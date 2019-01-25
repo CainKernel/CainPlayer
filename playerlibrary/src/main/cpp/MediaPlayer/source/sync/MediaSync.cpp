@@ -278,7 +278,7 @@ void MediaSync::checkExternalClockSpeed() {
     }
 }
 
-double MediaSync::calculateDelay(double delay) {
+double MediaSync::calculateDelay(double delay)  {
     double sync_threshold, diff = 0;
     // 如果不是同步到视频流，则需要计算延时时间
     if (playerState->syncType != AV_SYNC_VIDEO) {
