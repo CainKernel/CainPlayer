@@ -513,10 +513,6 @@ int MediaPlayer::readPackets() {
                     avcodec_flush_buffers(videoDecoder->getCodecContext());
                 }
 
-                if (audioDevice) {
-                    audioDevice->flush();
-                }
-
                 // 更新外部时钟值
                 if (playerState->seekFlags & AVSEEK_FLAG_BYTE) {
                     mediaSync->updateExternalClock(NAN);
