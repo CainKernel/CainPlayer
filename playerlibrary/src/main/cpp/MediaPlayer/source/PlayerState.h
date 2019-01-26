@@ -1,18 +1,15 @@
 //
-// Created by cain on 2018/12/26.
+// Created by cain on 2019/1/26.
 //
 
-#ifndef PLAYEROPTION_H
-#define PLAYEROPTION_H
-
-#include <stdio.h>
+#ifndef PLAYERSTATE_H
+#define PLAYERSTATE_H
 
 #include <Mutex.h>
 #include <Condition.h>
 #include <Thread.h>
 
 #include <common/FFmpegUtils.h>
-
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -67,13 +64,26 @@ typedef enum {
     AV_SYNC_EXTERNAL,   // 同步到外部时钟
 } SyncType;
 
-/**
- * 播放器状态结构体
- */
-typedef struct PlayerState {
+struct AVDictionary {
+    int count;
+    AVDictionaryEntry *elements;
+};
 
+class PlayerState {
+
+public:
+    PlayerState();
+
+    virtual ~PlayerState();
+
+    void reset();
+
+private:
+    void init();
+public:
+    Mutex mMutex;                   // 操作互斥锁，主要是给seek操作、音视频解码以及清空解码上下文缓冲使用，不加锁会导致ffmpeg内部崩溃现象
     AVDictionary *sws_dict;         // 视频转码option参数
-    AVDictionary *swr_opts;         //
+    AVDictionary *swr_opts;         // 音频重采样option参数
     AVDictionary *format_opts;      // 解复用option参数
     AVDictionary *codec_opts;       // 解码option参数
     AVDictionary *resample_opts;    // 重采样option参数
@@ -109,56 +119,7 @@ typedef struct PlayerState {
     int loop;                       // 循环播放
     int mute;                       // 静音播放
     int frameDrop;                  // 舍帧操作
+};
 
-} PlayerState;
 
-/**
- * 重置播放器状态结构体
- * @param state
- */
-inline void resetPlayerState(PlayerState *state) {
-
-    av_opt_free(state);
-
-    av_dict_free(&state->sws_dict);
-    av_dict_free(&state->swr_opts);
-    av_dict_free(&state->format_opts);
-    av_dict_free(&state->codec_opts);
-    av_dict_free(&state->resample_opts);
-    av_dict_set(&state->sws_dict, "flags", "bicubic", 0);
-
-    if (state->audioCodecName != NULL) {
-        av_freep(&state->audioCodecName);
-        state->audioCodecName = NULL;
-    }
-    if (state->videoCodecName != NULL) {
-        av_freep(&state->videoCodecName);
-        state->videoCodecName = NULL;
-    }
-    state->abortRequest = 1;
-    state->pauseRequest = 0;
-    state->seekByBytes = 0;
-    state->syncType = AV_SYNC_AUDIO;
-    state->startTime = AV_NOPTS_VALUE;
-    state->duration = AV_NOPTS_VALUE;
-    state->realTime = 0;
-    state->infiniteBuffer = -1;
-    state->audioDisable = 0;
-    state->videoDisable = 0;
-    state->displayDisable = 0;
-    state->fast = 0;
-    state->genpts = 0;
-    state->lowres = 0;
-    state->playbackRate = 1.0;
-    state->playbackPitch = 1.0;
-    state->seekRequest = 0;
-    state->seekFlags = 0;
-    state->seekPos = 0;
-    state->seekRel = 0;
-    state->seekRel = 0;
-    state->autoExit = 0;
-    state->loop = 0;
-    state->frameDrop = 1;
-}
-
-#endif //PLAYEROPTION_H
+#endif //PLAYERSTATE_H

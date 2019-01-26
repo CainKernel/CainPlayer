@@ -5,7 +5,7 @@
 #ifndef AUDIODEVICE_H
 #define AUDIODEVICE_H
 
-#include <PlayerOption.h>
+#include <PlayerState.h>
 
 // 音频PCM填充回调
 typedef void (*AudioPCMCallback) (void *userdata, uint8_t *stream, int len);

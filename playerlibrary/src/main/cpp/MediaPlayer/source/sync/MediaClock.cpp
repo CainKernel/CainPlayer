@@ -1,7 +1,7 @@
 //
 // Created by cain on 2018/12/30.
 //
-#include <PlayerOption.h>
+#include <PlayerState.h>
 #include "MediaClock.h"
 
 MediaClock::MediaClock() {

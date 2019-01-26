@@ -7,7 +7,7 @@
 
 
 #include <decoder/MediaDecoder.h>
-#include <PlayerOption.h>
+#include <PlayerState.h>
 #include <sync/MediaClock.h>
 
 class VideoDecoder : public MediaDecoder {

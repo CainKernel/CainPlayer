@@ -6,7 +6,7 @@
 #define MEDIASYNC_H
 
 #include <sync/MediaClock.h>
-#include <PlayerOption.h>
+#include <PlayerState.h>
 #include <decoder/VideoDecoder.h>
 #include <decoder/AudioDecoder.h>
 

@@ -7,7 +7,7 @@
 
 #include <sync/MediaClock.h>
 #include <SoundTouchWrapper.h>
-#include <PlayerOption.h>
+#include <PlayerState.h>
 #include <MediaPlayerCallback.h>
 #include <decoder/AudioDecoder.h>
 #include <decoder/VideoDecoder.h>

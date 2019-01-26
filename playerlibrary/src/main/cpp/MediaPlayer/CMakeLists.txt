@@ -51,6 +51,7 @@ add_library( media_player
 
              source/MediaPlayer.cpp
              source/MediaPlayerCallback.cpp
+             source/PlayerState.cpp
 
              # controller
              JniMediaPlayerCallback.cpp

@@ -7,7 +7,7 @@
 
 
 #include <decoder/MediaDecoder.h>
-#include <PlayerOption.h>
+#include <PlayerState.h>
 
 class AudioDecoder : public MediaDecoder {
 public:

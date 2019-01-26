@@ -103,6 +103,10 @@ int VideoDecoder::decodeVideo() {
 
     for (;;) {
 
+        if (playerState->seekRequest) {
+            continue;
+        }
+
         if (playerState->abortRequest) {
             ret = -1;
             break;
@@ -113,14 +117,17 @@ int VideoDecoder::decodeVideo() {
         }
 
         // 送去解码
+        playerState->mMutex.lock();
         ret = avcodec_send_packet(pCodecCtx, packet);
         if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
             av_packet_unref(packet);
+            playerState->mMutex.unlock();
             continue;
         }
 
         // 得到解码帧
         ret = avcodec_receive_frame(pCodecCtx, frame);
+        playerState->mMutex.unlock();
         if (ret < 0 && ret != AVERROR_EOF) {
             av_frame_unref(frame);
             av_packet_unref(packet);

@@ -30,16 +30,23 @@ int AudioDecoder::getAudioFrame(AVFrame *frame) {
 
     do {
 
+        if (playerState->seekRequest) {
+            continue;
+        }
+
         if (packetQueue->getPacket(packet) < 0) {
             return -1;
         }
 
+        playerState->mMutex.lock();
         ret = avcodec_send_packet(pCodecCtx, packet);
         if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
             av_packet_unref(packet);
+            playerState->mMutex.unlock();
             continue;
         }
         ret = avcodec_receive_frame(pCodecCtx, frame);
+        playerState->mMutex.unlock();
         // 释放数据包的引用，防止内存泄漏
         av_packet_unref(packet);
         if (ret < 0) {

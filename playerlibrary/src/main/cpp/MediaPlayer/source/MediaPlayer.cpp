@@ -50,9 +50,7 @@ MediaPlayer::MediaPlayer() {
     av_register_all();
     avformat_network_init();
     url = NULL;
-    playerState = (PlayerState *) av_mallocz(sizeof(PlayerState));
-    memset(playerState, 0, sizeof(PlayerState));
-    resetPlayerState(playerState);
+    playerState = new PlayerState();
     mDuration = 0;
     audioDecoder = NULL;
     videoDecoder = NULL;
@@ -119,6 +117,10 @@ MediaPlayer::~MediaPlayer() {
     if (url != NULL) {
         av_freep(&url);
         url = NULL;
+    }
+    if (playerState) {
+        delete playerState;
+        playerState = NULL;
     }
     mMutex.unlock();
     ALOGD("MediaPlayer Destructor");
@@ -557,7 +559,9 @@ int MediaPlayer::readPackets() {
             int64_t seek_min = playerState->seekRel > 0 ? seek_target - playerState->seekRel + 2: INT64_MIN;
             int64_t seek_max = playerState->seekRel < 0 ? seek_target - playerState->seekRel - 2: INT64_MAX;
             // 定位
+            playerState->mMutex.lock();
             ret = avformat_seek_file(pFormatCtx, -1, seek_min, seek_target, seek_max, playerState->seekFlags);
+            playerState->mMutex.unlock();
             if (ret < 0) {
                 av_log(NULL, AV_LOG_ERROR, "%s: error while seeking\n", url);
             } else {
