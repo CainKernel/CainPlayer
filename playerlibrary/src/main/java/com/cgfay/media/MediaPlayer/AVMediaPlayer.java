@@ -326,7 +326,6 @@ public class AVMediaPlayer {
      */
     private void onError(int code, String msg) {
         mPrepared = false;
-        stop();
         if (mErrorListener != null) {
             mErrorListener.onError(code, msg);
         }
@@ -337,7 +336,6 @@ public class AVMediaPlayer {
      */
     private void onCompletion() {
         mPrepared = false;
-        stop();
         if (mCompletionListener != null) {
             mCompletionListener.onCompleted();
         }

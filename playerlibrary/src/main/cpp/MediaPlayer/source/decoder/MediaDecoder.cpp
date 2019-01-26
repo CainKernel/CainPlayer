@@ -32,9 +32,17 @@ void MediaDecoder::start() {
     if (packetQueue) {
         packetQueue->start();
     }
+    mMutex.lock();
+    abortRequest = false;
+    mCondition.signal();
+    mMutex.unlock();
 }
 
 void MediaDecoder::stop() {
+    mMutex.lock();
+    abortRequest = true;
+    mCondition.signal();
+    mMutex.unlock();
     if (packetQueue) {
         packetQueue->abort();
     }

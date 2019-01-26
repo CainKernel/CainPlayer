@@ -41,6 +41,7 @@ public:
 protected:
     Mutex mMutex;
     Condition mCondition;
+    bool abortRequest;
     PlayerState *playerState;
     PacketQueue *packetQueue;       // 数据包队列
     AVCodecContext *pCodecCtx;

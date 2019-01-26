@@ -7,10 +7,12 @@
 AudioDecoder::AudioDecoder(AVCodecContext *avctx, AVStream *stream, int streamIndex, PlayerState *playerState)
         : MediaDecoder(avctx, stream, streamIndex, playerState) {
     packet = av_packet_alloc();
+    packetPending = 0;
 }
 
 AudioDecoder::~AudioDecoder() {
     stop();
+    packetPending = 0;
     if (packet) {
         av_packet_free(&packet);
         av_freep(&packet);
@@ -30,6 +32,11 @@ int AudioDecoder::getAudioFrame(AVFrame *frame) {
 
     do {
 
+        if (abortRequest) {
+            ret = -1;
+            break;
+        }
+
         if (playerState->seekRequest) {
             continue;
         }
@@ -40,7 +47,8 @@ int AudioDecoder::getAudioFrame(AVFrame *frame) {
             packetPending = 0;
         } else {
             if (packetQueue->getPacket(&pkt) < 0) {
-                return -1;
+                ret = -1;
+                break;
             }
         }
 
@@ -84,6 +92,10 @@ int AudioDecoder::getAudioFrame(AVFrame *frame) {
             }
         }
     } while (!got_frame);
+
+    if (ret < 0) {
+        return -1;
+    }
 
     return got_frame;
 }

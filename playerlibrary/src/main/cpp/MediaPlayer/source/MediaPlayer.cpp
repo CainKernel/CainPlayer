@@ -189,12 +189,6 @@ void MediaPlayer::stop() {
         delete readThread;
         readThread = NULL;
     }
-    if (audioDevice) {
-        audioDevice->stop();
-    }
-    if (mediaSync) {
-        mediaSync->stop();
-    }
 }
 
 void MediaPlayer::seekTo(float timeMs) {
@@ -662,6 +656,18 @@ int MediaPlayer::readPackets() {
     }
 
     ALOGD("read packets thread exit!");
+    if (audioDecoder) {
+        audioDecoder->stop();
+    }
+    if (videoDecoder) {
+        videoDecoder->stop();
+    }
+    if (audioDevice) {
+        audioDevice->stop();
+    }
+    if (mediaSync) {
+        mediaSync->stop();
+    }
     mExit = true;
     mCondition.signal();
 

@@ -103,13 +103,13 @@ int VideoDecoder::decodeVideo() {
 
     for (;;) {
 
-        if (playerState->seekRequest) {
-            continue;
-        }
-
-        if (playerState->abortRequest) {
+        if (abortRequest || playerState->abortRequest) {
             ret = -1;
             break;
+        }
+
+        if (playerState->seekRequest) {
+            continue;
         }
 
         if (packetQueue->getPacket(packet) < 0) {
