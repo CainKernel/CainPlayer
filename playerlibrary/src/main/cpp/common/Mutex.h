@@ -44,7 +44,7 @@ public:
 
     // lock or unlock the mutex
     status_t    lock();
-    void        unlock();
+    status_t    unlock();
 
     // lock if possible; returns 0 on success, error otherwise
     status_t    tryLock();
@@ -99,8 +99,8 @@ inline status_t Mutex::lock() {
     return -pthread_mutex_lock(&mMutex);
 }
 
-inline void Mutex::unlock() {
-    pthread_mutex_unlock(&mMutex);
+inline status_t Mutex::unlock() {
+    return -pthread_mutex_unlock(&mMutex);
 }
 
 inline status_t Mutex::tryLock() {

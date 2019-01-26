@@ -4,6 +4,48 @@
 
 #include "MediaPlayer.h"
 
+/**
+ * FFmpeg操作锁管理回调
+ * @param mtx
+ * @param op
+ * @return
+ */
+static int lockmgrCallback(void **mtx, enum AVLockOp op) {
+    switch (op) {
+        case AV_LOCK_CREATE: {
+            *mtx = new Mutex();
+            if (!*mtx) {
+                av_log(NULL, AV_LOG_FATAL, "failed to create mutex.\n");
+                return 1;
+            }
+            return 0;
+        }
+
+        case AV_LOCK_OBTAIN: {
+            if (!*mtx) {
+                return 1;
+            }
+            return ((Mutex *)(*mtx))->lock() != 0;
+        }
+
+        case AV_LOCK_RELEASE: {
+            if (!*mtx) {
+                return 1;
+            }
+            return ((Mutex *)(*mtx))->unlock() != 0;
+        }
+
+        case AV_LOCK_DESTROY: {
+            if (!*mtx) {
+                delete (*mtx);
+                *mtx = NULL;
+            }
+            return 0;
+        }
+    }
+    return 1;
+}
+
 MediaPlayer::MediaPlayer() {
     av_register_all();
     avformat_network_init();
@@ -28,10 +70,17 @@ MediaPlayer::MediaPlayer() {
     audioResampler = NULL;
     readThread = NULL;
     mExit = true;
+
+    // 注册一个多线程锁管理回调，主要是解决多个视频源时保持avcodec_open/close的原子操作
+    if (av_lockmgr_register(lockmgrCallback)) {
+        av_log(NULL, AV_LOG_FATAL, "Could not initialize lock manager!\n");
+    }
+
 }
 
 MediaPlayer::~MediaPlayer() {
     avformat_network_deinit();
+    av_lockmgr_register(NULL);
     stop();
     mMutex.lock();
     if (playerCallback != NULL) {
