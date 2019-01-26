@@ -18,6 +18,7 @@ public:
     int getAudioFrame(AVFrame *frame);
 
 private:
+    bool packetPending; // 一次解码无法全部消耗完AVPacket中的数据的标志
     AVPacket *packet;
     int64_t next_pts;
     AVRational next_pts_tb;

@@ -57,13 +57,6 @@ int MediaDecoder::pushPacket(AVPacket *pkt) {
     return 0;
 }
 
-int MediaDecoder::pushNullPacket() {
-    if (packetQueue != NULL) {
-        return packetQueue->pushNullPacket(streamIndex);
-    }
-    return -1;
-}
-
 int MediaDecoder::getPacketSize() {
     return packetQueue ? packetQueue->getPacketSize() : 0;
 }

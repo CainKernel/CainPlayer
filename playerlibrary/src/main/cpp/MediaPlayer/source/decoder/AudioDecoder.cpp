@@ -34,17 +34,33 @@ int AudioDecoder::getAudioFrame(AVFrame *frame) {
             continue;
         }
 
-        if (packetQueue->getPacket(packet) < 0) {
-            return -1;
+        AVPacket pkt;
+        if (packetPending) {
+            av_packet_move_ref(&pkt, packet);
+            packetPending = 0;
+        } else {
+            if (packetQueue->getPacket(&pkt) < 0) {
+                return -1;
+            }
         }
 
         playerState->mMutex.lock();
-        ret = avcodec_send_packet(pCodecCtx, packet);
-        if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-            av_packet_unref(packet);
+        // 将数据包解码
+        ret = avcodec_send_packet(pCodecCtx, &pkt);
+        if (ret < 0) {
+            // 一次解码无法消耗完AVPacket中的所有数据，需要重新解码
+            if (ret == AVERROR(EAGAIN)) {
+                av_packet_move_ref(packet, &pkt);
+                packetPending = 1;
+            } else {
+                av_packet_unref(&pkt);
+                packetPending = 0;
+            }
             playerState->mMutex.unlock();
             continue;
         }
+
+        // 获取解码得到的音频帧AVFrame
         ret = avcodec_receive_frame(pCodecCtx, frame);
         playerState->mMutex.unlock();
         // 释放数据包的引用，防止内存泄漏

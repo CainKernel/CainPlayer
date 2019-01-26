@@ -78,6 +78,7 @@ void PlayerState::reset() {
     seekRel = 0;
     seekRel = 0;
     autoExit = 0;
-    loop = 0;
+    loop = 1;
     frameDrop = 1;
+    reorderVideoPts = -1;
 }

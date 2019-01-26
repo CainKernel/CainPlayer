@@ -134,6 +134,14 @@ int VideoDecoder::decodeVideo() {
             continue;
         } else {
             got_picture = 1;
+
+            // 是否重排pts，默认情况下需要重排pts的
+            if (playerState->reorderVideoPts == -1) {
+                frame->pts = av_frame_get_best_effort_timestamp(frame);
+            } else if (!playerState->reorderVideoPts) {
+                frame->pts = frame->pkt_dts;
+            }
+
             // 丢帧处理
             if (masterClock != NULL) {
                 double dpts = NAN;

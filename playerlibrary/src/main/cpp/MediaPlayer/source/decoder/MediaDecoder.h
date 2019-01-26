@@ -24,8 +24,6 @@ public:
 
     int pushPacket(AVPacket *pkt);
 
-    int pushNullPacket();
-
     int getPacketSize();
 
     int getStreamIndex();

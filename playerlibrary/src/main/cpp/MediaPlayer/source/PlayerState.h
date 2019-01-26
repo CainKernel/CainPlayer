@@ -23,6 +23,7 @@ extern "C" {
 };
 
 #define VIDEO_QUEUE_SIZE 3
+#define SAMPLE_QUEUE_SIZE 9
 
 #define MAX_QUEUE_SIZE (15 * 1024 * 1024)
 #define MIN_FRAMES 25
@@ -119,6 +120,7 @@ public:
     int loop;                       // 循环播放
     int mute;                       // 静音播放
     int frameDrop;                  // 舍帧操作
+    int reorderVideoPts;            // 视频帧重排pts
 };
 
 

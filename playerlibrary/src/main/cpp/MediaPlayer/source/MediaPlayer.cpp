@@ -550,6 +550,7 @@ int MediaPlayer::readPackets() {
         if (playerState->pauseRequest &&
             (!strcmp(pFormatCtx->iformat->name, "rtsp") ||
              (pFormatCtx->pb && !strncmp(url, "mmsh:", 5)))) {
+            av_usleep(10 * 1000);
             continue;
         }
 #endif
@@ -599,7 +600,6 @@ int MediaPlayer::readPackets() {
                     break;
                 }
                 videoDecoder->pushPacket(&copy);
-                videoDecoder->pushNullPacket();
             }
             attachmentRequest = 0;
         }
@@ -617,12 +617,6 @@ int MediaPlayer::readPackets() {
         if (ret < 0) {
             // 如果没能读出裸数据包，判断是否是结尾
             if ((ret == AVERROR_EOF || avio_feof(pFormatCtx->pb)) && !eof) {
-                if (videoDecoder != NULL) {
-                    videoDecoder->pushNullPacket();
-                }
-                if (audioDecoder != NULL) {
-                    audioDecoder->pushNullPacket();
-                }
                 eof = 1;
             }
             // 读取出错，则直接退出
@@ -642,6 +636,9 @@ int MediaPlayer::readPackets() {
                     break;
                 }
             }
+            // 读取失败时，睡眠10毫秒继续
+            av_usleep(10 * 1000);
+            continue;
         } else {
             eof = 0;
         }
