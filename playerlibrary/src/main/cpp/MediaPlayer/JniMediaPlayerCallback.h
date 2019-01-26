@@ -21,6 +21,8 @@ public:
 
     void onComplete() override;
 
+    void onSeekComplete() override;
+
     void onGetPCM(uint8_t *pcmData, size_t size) override;
 
 private:
@@ -31,6 +33,7 @@ private:
     jmethodID jmid_prepared;
     jmethodID jmid_error;
     jmethodID jmid_complete;
+    jmethodID jmid_seekComplete;
     jmethodID jmid_getPCM;
 };
 

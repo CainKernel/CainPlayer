@@ -211,7 +211,7 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         if (mMediaPlayer != null) {
-            mMediaPlayer.surfaceCreated(holder.getSurface());
+            mMediaPlayer.setDisplay(holder);
         }
     }
 

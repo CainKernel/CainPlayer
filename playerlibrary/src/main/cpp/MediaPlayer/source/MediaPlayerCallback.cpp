@@ -24,6 +24,14 @@ void MediaPlayerCallback::onComplete() {
 
 }
 
+void MediaPlayerCallback::onSeekComplete() {
+
+}
+
+void MediaPlayerCallback::onVideoSizeChanged(int width, int height) {
+
+}
+
 void MediaPlayerCallback::onGetPCM(uint8_t *pcmData, size_t size) {
 
 }

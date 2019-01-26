@@ -1,12 +1,18 @@
 package com.cgfay.media.MediaPlayer;
 
+import android.content.Context;
+import android.os.PowerManager;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Surface;
+import android.view.SurfaceHolder;
 
 /**
  * 媒体播放器
  */
 public class AVMediaPlayer {
+
+    private static final String TAG = "AVMediaPlayer";
 
     static {
         System.loadLibrary("ffmpeg");
@@ -14,16 +20,20 @@ public class AVMediaPlayer {
         System.loadLibrary("media_player");
     }
 
+    // 设置SurfaceHolder
+    private SurfaceHolder mSurfaceHolder;
+    // 电源管理锁
+    private PowerManager.WakeLock mWakeLock = null;
+    // 播放阶段屏幕常亮
+    private boolean mScreenOnWhilePlaying;
+    // 是否保持常亮
+    private boolean mStayAwake;
+    // 路径
     private String mPath;
-
+    // 准备完成标志
     private boolean mPrepared;
-
-    // 播放完成回调
-    private OnCompletionListener mCompletionListener;
-    // 播放出错回调
-    private OnErrorListener mErrorListener;
-    // 准备完成回调
-    private OnPreparedListener mPreparedListener;
+    // 定位标志
+    private boolean mSeeking;
 
     public AVMediaPlayer() {
         nativeSetup();
@@ -52,11 +62,32 @@ public class AVMediaPlayer {
     }
 
     /**
-     * Surface已创建
+     * 设置显示
+     * @param sh
+     */
+    public void setDisplay(SurfaceHolder sh) {
+        mSurfaceHolder = sh;
+        Surface surface;
+        if (sh != null) {
+            surface = sh.getSurface();
+        } else {
+            surface = null;
+        }
+        nativeSurfaceCreated(surface);
+        updateSurfaceScreenOn();
+    }
+
+    /**
+     * 设置SurfaceSurface
      * @param surface
      */
-    public void surfaceCreated(Surface surface) {
+    public void setSurface(Surface surface) {
+        if (mScreenOnWhilePlaying && surface != null) {
+            Log.w(TAG, "setScreenOnWhilePlaying(true) is ineffective for Surface");
+        }
+        mSurfaceHolder = null;
         nativeSurfaceCreated(surface);
+        updateSurfaceScreenOn();
     }
 
     /**
@@ -128,6 +159,10 @@ public class AVMediaPlayer {
      * @param timeMs 毫秒
      */
     public void seekTo(float timeMs) {
+        if (mSeeking) {
+            return;
+        }
+        mSeeking = true;
         nativeSeek(timeMs);
     }
 
@@ -213,6 +248,68 @@ public class AVMediaPlayer {
     public native int getVideoHeight();
 
     /**
+     * 设置电源模式
+     * @param context
+     * @param mode
+     */
+    public void setWakeMode(Context context, int mode) {
+        boolean washeld = false;
+
+        if (mWakeLock != null) {
+            if (mWakeLock.isHeld()) {
+                washeld = true;
+                mWakeLock.release();
+            }
+            mWakeLock = null;
+        }
+
+        PowerManager pm = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
+        mWakeLock = pm.newWakeLock(mode|PowerManager.ON_AFTER_RELEASE, AVMediaPlayer.class.getName());
+        mWakeLock.setReferenceCounted(false);
+        if (washeld) {
+            mWakeLock.acquire();
+        }
+    }
+
+    /**
+     * Control whether we should use the attached SurfaceHolder to keep the
+     * screen on while video playback is occurring.  This is the preferred
+     * method over {@link #setWakeMode} where possible, since it doesn't
+     * require that the application have permission for low-level wake lock
+     * access.
+     *
+     * @param screenOn Supply true to keep the screen on, false to allow it
+     * to turn off.
+     */
+    public void setScreenOnWhilePlaying(boolean screenOn) {
+        if (mScreenOnWhilePlaying != screenOn) {
+            if (screenOn && mSurfaceHolder == null) {
+                Log.w(TAG, "setScreenOnWhilePlaying(true) is ineffective without a SurfaceHolder");
+            }
+            mScreenOnWhilePlaying = screenOn;
+            updateSurfaceScreenOn();
+        }
+    }
+
+    private void stayAwake(boolean awake) {
+        if (mWakeLock != null) {
+            if (awake && !mWakeLock.isHeld()) {
+                mWakeLock.acquire();
+            } else if (!awake && mWakeLock.isHeld()) {
+                mWakeLock.release();
+            }
+        }
+        mStayAwake = awake;
+        updateSurfaceScreenOn();
+    }
+
+    private void updateSurfaceScreenOn() {
+        if (mSurfaceHolder != null) {
+            mSurfaceHolder.setKeepScreenOn(mScreenOnWhilePlaying && mStayAwake);
+        }
+    }
+
+    /**
      * 准备完成回调，jni层调用
      */
     private void onPrepared() {
@@ -247,6 +344,28 @@ public class AVMediaPlayer {
     }
 
     /**
+     * 定位完成回调，jni层调用
+     */
+    private void onSeekComplete() {
+        mSeeking = false;
+        if (mOnSeekCompleteListener != null) {
+            mOnSeekCompleteListener.onSeekComplete();
+        }
+        Log.d("AVMediaPlayer", "onSeekComplete: finish!");
+    }
+
+    /**
+     * 视频宽高发生变化，jni层调用
+     * @param width
+     * @param height
+     */
+    private void onVideoSizeChanged(int width, int height) {
+        if (mOnVideoSizeChangedListener != null) {
+            mOnVideoSizeChangedListener.onVideoSizeChanged(width, height);
+        }
+    }
+
+    /**
      * 获取音频PCM数据，jni层调用
      * @param bytes
      * @param size
@@ -256,34 +375,94 @@ public class AVMediaPlayer {
     }
 
     /**
-     * 准备完成监听器
+     * Interface definition for a callback to be invoked when the media
+     * source is ready for playback.
      */
     public interface OnPreparedListener {
         void onPrepared();
     }
 
     /**
-     * 设置准备完成回调
-     * @param listener
+     * Register a callback to be invoked when the media source is ready
+     * for playback.
+     *
+     * @param listener the callback that will be run
      */
     public void setOnPreparedListener(OnPreparedListener listener) {
         mPreparedListener = listener;
     }
 
+    private OnPreparedListener mPreparedListener;
+
     /**
-     * 播放完成监听器
+     * Interface definition for a callback to be invoked when playback of
+     * a media source has completed.
      */
     public interface OnCompletionListener {
         void onCompleted();
     }
 
     /**
-     * 设置完成回调
-     * @param listener
+     * Register a callback to be invoked when the end of a media source
+     * has been reached during playback.
+     *
+     * @param listener the callback that will be run
      */
     public void setOnCompletionListener(OnCompletionListener listener) {
         mCompletionListener = listener;
     }
+
+    private OnCompletionListener mCompletionListener;
+
+    /**
+     * Interface definition of a callback to be invoked indicating
+     * the completion of a seek operation.
+     */
+    public interface OnSeekCompleteListener {
+        void onSeekComplete();
+    }
+
+    /**
+     * Register a callback to be invoked when a seek operation has been
+     * completed.
+     *
+     * @param listener the callback that will be run
+     */
+    public void setOnSeekCompleteListener(OnSeekCompleteListener listener) {
+        mOnSeekCompleteListener = listener;
+    }
+
+    private OnSeekCompleteListener mOnSeekCompleteListener;
+
+    /**
+     * Interface definition of a callback to be invoked when the
+     * video size is first known or updated
+     */
+    public interface OnVideoSizeChangedListener {
+        /**
+         * Called to indicate the video size
+         *
+         * The video size (width and height) could be 0 if there was no video,
+         * no display surface was set, or the value was not determined yet.
+         *
+         * @param width     the width of the video
+         * @param height    the height of the video
+         */
+        void onVideoSizeChanged(int width, int height);
+    }
+
+    /**
+     * Register a callback to be invoked when the video size is
+     * known or updated.
+     *
+     * @param listener the callback that will be run
+     */
+    public void setOnVideoSizeChangedListener(OnVideoSizeChangedListener listener) {
+        mOnVideoSizeChangedListener = listener;
+    }
+
+    private OnVideoSizeChangedListener mOnVideoSizeChangedListener;
+
 
     /**
      * 出错监听器
@@ -299,5 +478,7 @@ public class AVMediaPlayer {
     public void setOnErrorListener(OnErrorListener listener) {
         mErrorListener = listener;
     }
+
+    private OnErrorListener mErrorListener;
 
 }

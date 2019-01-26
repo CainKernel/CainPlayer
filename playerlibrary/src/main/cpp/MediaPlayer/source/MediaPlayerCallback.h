@@ -22,6 +22,12 @@ public:
     // 播放完成
     virtual void onComplete();
 
+    // 定位完成回调
+    virtual void onSeekComplete();
+
+    // 视频宽高发生变化
+    virtual void onVideoSizeChanged(int width, int height);
+
     // 音频PCM数据
     virtual void onGetPCM(uint8_t *pcmData, size_t size);
 };

@@ -45,6 +45,7 @@ private:
     ANativeWindow *mWindow;             // Surface窗口
     EGLSurface eglSurface;              // eglSurface
     EglHelper *eglHelper;               // EGL帮助器
+    bool mSurfaceReset;                 // 重新设置Surface
     bool mHasSurface;                   // 是否存在Surface
     bool mHaveEGLSurface;               // EGLSurface
     bool mHaveEGlContext;               // 释放资源

@@ -31,6 +31,7 @@ void GLESDevice::surfaceCreated(ANativeWindow *window) {
     if (mWindow != NULL) {
         ANativeWindow_release(mWindow);
         mWindow = NULL;
+        mSurfaceReset = true;
     }
     mWindow = window;
     mHasSurface = true;
@@ -78,6 +79,13 @@ void GLESDevice::onInitTexture(int width, int height, TextureFormat format, Blen
     if (!mHaveEGlContext) {
         return;
     }
+
+    // 重新设置Surface，兼容SurfaceHolder处理
+    if (mHasSurface && mSurfaceReset) {
+        terminate(false);
+        mSurfaceReset = false;
+    }
+
     // 创建/释放EGLSurface
     if (eglSurface == EGL_NO_SURFACE && mWindow != NULL) {
         if (mHasSurface && !mHaveEGLSurface) {

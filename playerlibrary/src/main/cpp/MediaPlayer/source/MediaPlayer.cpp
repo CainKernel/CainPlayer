@@ -200,6 +200,12 @@ void MediaPlayer::seekTo(float timeMs) {
         return;
     }
     mMutex.lock();
+
+    // 等待上一次操作完成
+    while (playerState->seekRequest) {
+        mCondition.wait(mMutex);
+    }
+
     if (!playerState->seekRequest) {
         int64_t start_time = 0;
         int64_t seek_pos = av_rescale(timeMs, AV_TIME_BASE, 1000);
@@ -572,7 +578,12 @@ int MediaPlayer::readPackets() {
             }
             attachmentRequest = 1;
             playerState->seekRequest = 0;
+            mCondition.signal();
             eof = 0;
+            // 定位完成回调通知
+            if (playerCallback) {
+                playerCallback->onSeekComplete();
+            }
         }
 
         // 取得封面数据包
