@@ -169,7 +169,9 @@ JNIEXPORT void JNICALL
 Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetVolume(JNIEnv *env,
                                                                        jobject instance,
                                                                        jint percent) {
-
+    if (mediaPlayer != NULL) {
+        mediaPlayer->setVolume(percent, percent);
+    }
 }
 
 extern "C"

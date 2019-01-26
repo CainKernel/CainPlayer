@@ -71,6 +71,10 @@ private:
     int pauseRequest;                   // 暂停标志
     int flushRequest;                   // 刷新标志
 
+    bool updateVolume;                  // 更新音量
+    float leftVolume;                   // 左音量
+    float rightVolume;                  // 右音量
+
 };
 
 

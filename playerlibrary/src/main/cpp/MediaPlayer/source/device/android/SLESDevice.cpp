@@ -21,6 +21,7 @@ SLESDevice::SLESDevice() {
     pauseRequest = 0;
     flushRequest = 0;
     audioThread = NULL;
+    updateVolume = false;
 }
 
 SLESDevice::~SLESDevice() {
@@ -105,13 +106,12 @@ void SLESDevice::flush() {
  */
 void SLESDevice::setStereoVolume(float left_volume, float right_volume) {
     Mutex::Autolock lock(mMutex);
-    if (slVolumeItf != NULL) {
-        SLmillibel level = getAmplificationLevel((left_volume + right_volume) / 2);
-        SLresult result = (*slVolumeItf)->SetVolumeLevel(slVolumeItf, level);
-        if (result != SL_RESULT_SUCCESS) {
-            ALOGE("slVolumeItf->SetVolumeLevel failed %d\n", (int)result);
-        }
+    if (!updateVolume) {
+        leftVolume = left_volume;
+        rightVolume = right_volume;
+        updateVolume = true;
     }
+    mCondition.signal();
 }
 
 void SLESDevice::run() {
@@ -180,6 +180,18 @@ void SLESDevice::run() {
             audioDeviceSpec.callback(audioDeviceSpec.userdata, next_buffer, bytes_per_buffer);
         }
         mMutex.unlock();
+
+        // 更新音量
+        if (updateVolume) {
+            if (slVolumeItf != NULL) {
+                SLmillibel level = getAmplificationLevel((leftVolume + rightVolume) / 2);
+                SLresult result = (*slVolumeItf)->SetVolumeLevel(slVolumeItf, level);
+                if (result != SL_RESULT_SUCCESS) {
+                    ALOGE("slVolumeItf->SetVolumeLevel failed %d\n", (int)result);
+                }
+            }
+            updateVolume = false;
+        }
 
         // 刷新缓冲区还是将数据入队缓冲区
         if (flushRequest) {

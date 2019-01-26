@@ -51,6 +51,8 @@ public:
 
     void setLooping(int looping);
 
+    void setVolume(float leftVolume, float rightVolume);
+
     void setMute(int mute);
 
     void setRate(float rate);

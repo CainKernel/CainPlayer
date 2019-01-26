@@ -225,6 +225,12 @@ void MediaPlayer::setLooping(int looping) {
     mMutex.unlock();
 }
 
+void MediaPlayer::setVolume(float leftVolume, float rightVolume) {
+    if (audioDevice) {
+        audioDevice->setStereoVolume(leftVolume, rightVolume);
+    }
+}
+
 void MediaPlayer::setMute(int mute) {
     mMutex.lock();
     playerState->mute = mute;
