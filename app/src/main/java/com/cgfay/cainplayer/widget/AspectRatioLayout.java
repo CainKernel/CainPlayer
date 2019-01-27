@@ -1,4 +1,4 @@
-package com.cgfay.media.widget;
+package com.cgfay.cainplayer.widget;
 
 import android.content.Context;
 import android.support.annotation.AttrRes;

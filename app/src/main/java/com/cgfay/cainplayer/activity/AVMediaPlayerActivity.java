@@ -1,4 +1,4 @@
-package com.cgfay.media.activity;
+package com.cgfay.cainplayer.activity;
 
 import android.graphics.Bitmap;
 import android.os.Handler;
@@ -19,8 +19,8 @@ import android.widget.TextView;
 
 import com.cgfay.media.Medadata.AVMediaMetadataRetriever;
 import com.cgfay.media.MediaPlayer.AVMediaPlayer;
-import com.cgfay.media.R;
-import com.cgfay.media.widget.AspectRatioLayout;
+import com.cgfay.cainplayer.R;
+import com.cgfay.cainplayer.widget.AspectRatioLayout;
 
 public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnClickListener,
         SurfaceHolder.Callback, SeekBar.OnSeekBarChangeListener {

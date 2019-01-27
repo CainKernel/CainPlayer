@@ -9,7 +9,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 
 import com.cgfay.cainplayer.R;
-import com.cgfay.media.activity.AVMediaPlayerActivity;
 import com.cgfay.medialibrary.engine.MediaScanEngine;
 import com.cgfay.medialibrary.listener.OnMediaSelectedListener;
 import com.cgfay.medialibrary.loader.impl.GlideMediaLoader;

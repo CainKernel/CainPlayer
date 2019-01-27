@@ -7,7 +7,7 @@
     android:orientation="vertical"
     tools:context=".activity.AVMediaPlayerActivity">
 
-    <com.cgfay.media.widget.AspectRatioLayout
+    <com.cgfay.cainplayer.widget.AspectRatioLayout
         android:id="@+id/layout_aspect_ratio"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
@@ -35,7 +35,7 @@
                 android:layout_gravity="center_horizontal"
                 android:max="100"/>
         </LinearLayout>
-    </com.cgfay.media.widget.AspectRatioLayout>
+    </com.cgfay.cainplayer.widget.AspectRatioLayout>
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
