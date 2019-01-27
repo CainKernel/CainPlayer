@@ -196,13 +196,23 @@ Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_nativeSetPitch(JNIEnv *env, jobje
 }
 
 extern "C"
-JNIEXPORT jint JNICALL
+JNIEXPORT jlong JNICALL
+Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_getCurrentPosition(JNIEnv *env, jobject instance) {
+
+    if (mediaPlayer != NULL) {
+        return mediaPlayer->getCurrentPosition();
+    }
+    return 0;
+}
+
+extern "C"
+JNIEXPORT jlong JNICALL
 Java_com_cgfay_media_MediaPlayer_AVMediaPlayer_getDuration(JNIEnv *env, jobject instance) {
 
     if (mediaPlayer != NULL) {
         return mediaPlayer->getDuration();
     }
-    return 0;
+    return -1;
 }
 
 extern "C"

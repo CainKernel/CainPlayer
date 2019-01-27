@@ -255,14 +255,19 @@ public class StringUtils {
 
     /**
      * 时间显示(只显示到秒)
-     * @param totalMillisSeconds
+     * @param millisSeconds
      * @return
      */
-    public static String generateStandardTime(int totalMillisSeconds) {
-        int totalSeconds = totalMillisSeconds / 1000;
+    public static String generateStandardTime(long millisSeconds) {
+        int totalSeconds = (int) millisSeconds / 1000;
         int seconds = totalSeconds % 60;
         int minutes = (totalSeconds / 60) % 60;
-        return String.format("%02d:%02d", minutes, seconds);
+        int hours = (minutes / 3600) % 60;
+        if (hours > 0) {
+            return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+        } else {
+            return String.format("%02d:%02d", minutes, seconds);
+        }
     }
 
     /**

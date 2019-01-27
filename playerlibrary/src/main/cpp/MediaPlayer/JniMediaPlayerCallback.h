@@ -23,6 +23,8 @@ public:
 
     void onSeekComplete() override;
 
+    void onVideoSizeChanged(int width, int height) override;
+
     void onGetPCM(uint8_t *pcmData, size_t size) override;
 
 private:
@@ -34,6 +36,7 @@ private:
     jmethodID jmid_error;
     jmethodID jmid_complete;
     jmethodID jmid_seekComplete;
+    jmethodID jmid_videoSizeChanged;
     jmethodID jmid_getPCM;
 };
 

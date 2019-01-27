@@ -63,7 +63,9 @@ public:
 
     int getVideoHeight();
 
-    int getDuration();
+    long getCurrentPosition();
+
+    long getDuration();
 
     int isPlaying();
 
@@ -96,7 +98,7 @@ private:
 
     // 解复用处理
     AVFormatContext *pFormatCtx;            // 解码上下文
-    int mDuration;                          // 文件总时长
+    int64_t mDuration;                      // 文件总时长
     int lastPaused;                         // 上一次暂停状态
     int eof;                                // 数据包读到结尾标志
     int attachmentRequest;                  // 视频封面数据包请求

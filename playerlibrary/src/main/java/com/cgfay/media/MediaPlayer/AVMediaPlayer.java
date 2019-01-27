@@ -1,6 +1,7 @@
 package com.cgfay.media.MediaPlayer;
 
 import android.content.Context;
+import android.media.MediaPlayer;
 import android.os.PowerManager;
 import android.text.TextUtils;
 import android.util.Log;
@@ -224,10 +225,17 @@ public class AVMediaPlayer {
     private native void nativeSetPitch(float pitch);
 
     /**
-     * 获取时长
-     * @return
+     * Gets the current playback position
+     * @return millisSeconds
      */
-    public native int getDuration();
+    public native long getCurrentPosition();
+
+    /**
+     * GGets the duration of the file.
+     * @return the duration in milliseconds, if no duration is available
+     *         (for example, if streaming live content), -1 is returned.
+     */
+    public native long getDuration();
 
     /**
      * 是否正在播放

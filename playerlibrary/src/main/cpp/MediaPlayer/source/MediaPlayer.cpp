@@ -51,7 +51,7 @@ MediaPlayer::MediaPlayer() {
     avformat_network_init();
     url = NULL;
     playerState = new PlayerState();
-    mDuration = 0;
+    mDuration = -1;
     audioDecoder = NULL;
     videoDecoder = NULL;
     pFormatCtx = NULL;
@@ -192,7 +192,8 @@ void MediaPlayer::stop() {
 }
 
 void MediaPlayer::seekTo(float timeMs) {
-    if (mDuration <= 0) {
+    // when is a live media stream, duration is -1
+    if (!playerState->realTime && mDuration < 0) {
         return;
     }
     mMutex.lock();
@@ -209,10 +210,10 @@ void MediaPlayer::seekTo(float timeMs) {
         if (start_time > 0 && start_time != AV_NOPTS_VALUE) {
             seek_pos += start_time;
         }
-        playerState->seekRequest = 1;
         playerState->seekPos = seek_pos;
         playerState->seekRel = 0;
         playerState->seekFlags &= ~AVSEEK_FLAG_BYTE;
+        playerState->seekRequest = 1;
         mCondition.signal();
     }
     mMutex.unlock();
@@ -268,9 +269,40 @@ int MediaPlayer::getVideoHeight() {
     return 0;
 }
 
-int MediaPlayer::getDuration() {
+long MediaPlayer::getCurrentPosition() {
     Mutex::Autolock lock(mMutex);
-    return mDuration;
+    int64_t currentPosition = 0;
+    // 处于定位
+    if (playerState->seekRequest) {
+        currentPosition = playerState->seekPos;
+    } else {
+
+        // 起始延时
+        int64_t start_time = pFormatCtx->start_time;
+        int64_t start_diff = 0;
+        if (start_time > 0 && start_time != AV_NOPTS_VALUE) {
+            start_diff = av_rescale(start_time, 1000, AV_TIME_BASE);
+        }
+
+        // 计算主时钟的时间
+        int64_t pos = 0;
+        double clock = mediaSync->getMasterClock();
+        if (isnan(clock)) {
+            pos = playerState->seekPos;
+        } else {
+            pos = (int64_t)(clock * 1000);
+        }
+        if (pos < 0 || pos < start_diff) {
+            return 0;
+        }
+        return (long) (pos - start_diff);
+    }
+    return (long)currentPosition;
+}
+
+long MediaPlayer::getDuration() {
+    Mutex::Autolock lock(mMutex);
+    return (long)mDuration;
 }
 
 int MediaPlayer::isPlaying() {
@@ -365,9 +397,20 @@ int MediaPlayer::readPackets() {
             break;
         }
 
-        // 文件时长(秒)
-        if (pFormatCtx->duration != AV_NOPTS_VALUE) {
-            mDuration = (int)(pFormatCtx->duration / AV_TIME_BASE);
+        // 判断是否实时流，判断是否需要设置无限缓冲区
+        playerState->realTime = isRealTime(pFormatCtx);
+        if (playerState->infiniteBuffer < 0 && playerState->realTime) {
+            playerState->infiniteBuffer = 1;
+        }
+
+        // Gets the duration of the file, -1 if no duration available.
+        if (playerState->realTime) {
+            mDuration = -1;
+        } else {
+            mDuration = -1;
+            if (pFormatCtx->duration != AV_NOPTS_VALUE) {
+                mDuration = av_rescale(pFormatCtx->duration, 1000, AV_TIME_BASE);
+            }
         }
 
         if (pFormatCtx->pb) {
@@ -388,16 +431,13 @@ int MediaPlayer::readPackets() {
             if (pFormatCtx->start_time != AV_NOPTS_VALUE) {
                 timestamp += pFormatCtx->start_time;
             }
+            playerState->mMutex.lock();
             ret = avformat_seek_file(pFormatCtx, -1, INT64_MIN, timestamp, INT64_MAX, 0);
+            playerState->mMutex.unlock();
             if (ret < 0) {
                 av_log(NULL, AV_LOG_WARNING, "%s: could not seek to position %0.3f\n",
                        url, (double)timestamp / AV_TIME_BASE);
             }
-        }
-        // 判断是否实时流，判断是否需要设置无限缓冲区
-        playerState->realTime = isRealTime(pFormatCtx);
-        if (playerState->infiniteBuffer < 0 && playerState->realTime) {
-            playerState->infiniteBuffer = 1;
         }
 
         // 查找媒体流信息

@@ -17,12 +17,14 @@ JniMediaPlayerCallback::JniMediaPlayerCallback(_JavaVM *javaVM, JNIEnv *env, job
         jmid_prepared    = env->GetMethodID(clazz, "onPrepared", "()V");
         jmid_getPCM      = env->GetMethodID(clazz, "onGetPCM", "([BI)V");
         jmid_seekComplete = env->GetMethodID(clazz, "onSeekComplete", "()V");
+        jmid_videoSizeChanged = env->GetMethodID(clazz, "onVideoSizeChanged", "(II)V");
     } else {
         jmid_complete = NULL;
         jmid_error = NULL;
         jmid_prepared = NULL;
         jmid_getPCM = NULL;
         jmid_seekComplete = NULL;
+        jmid_videoSizeChanged = NULL;
     }
 }
 
@@ -84,6 +86,20 @@ void JniMediaPlayerCallback::onSeekComplete() {
     }
 
     jniEnv->CallVoidMethod(jobj, jmid_seekComplete);
+
+    javaVM->DetachCurrentThread();
+}
+
+void JniMediaPlayerCallback::onVideoSizeChanged(int width, int height) {
+    if (jmid_videoSizeChanged == NULL) {
+        return;
+    }
+    JNIEnv *jniEnv;
+    if (javaVM->AttachCurrentThread(&jniEnv, 0) != JNI_OK) {
+        return;
+    }
+
+    jniEnv->CallVoidMethod(jobj, jmid_videoSizeChanged, width, height);
 
     javaVM->DetachCurrentThread();
 }

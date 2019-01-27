@@ -3,6 +3,7 @@ package com.cgfay.cainplayer.activity;
 import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -21,11 +22,16 @@ import com.cgfay.media.Medadata.AVMediaMetadataRetriever;
 import com.cgfay.media.MediaPlayer.AVMediaPlayer;
 import com.cgfay.cainplayer.R;
 import com.cgfay.cainplayer.widget.AspectRatioLayout;
+import com.cgfay.utilslibrary.utils.StringUtils;
+
+import java.lang.ref.WeakReference;
 
 public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnClickListener,
         SurfaceHolder.Callback, SeekBar.OnSeekBarChangeListener {
 
     private static final String TAG = "AVMediaPlayerActivity";
+
+    private static final int MSG_UPDATE_POSITON = 0x01;
 
     public static final String PATH = "path";
 
@@ -34,6 +40,8 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
     private boolean visible = false;
     private LinearLayout mLayoutOperation;
     private Button mBtnPause;
+    private TextView mTvCurrentPosition;
+    private TextView mTvDuration;
     private SeekBar mSeekBar;
     private ImageView mImageCover;
     private TextView mTextMetadata;
@@ -43,7 +51,7 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
 
     private AVMediaPlayer mMediaPlayer;
 
-    private Handler mMainHandler;
+    private EventHandler mEventHandler;
 
     private AVMediaMetadataRetriever mMetadataRetriever;
 
@@ -52,7 +60,7 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_media_player);
         mPath = getIntent().getStringExtra(PATH);
-        mMainHandler = new Handler(Looper.getMainLooper());
+        mEventHandler = new EventHandler(this, Looper.getMainLooper());
         initView();
         initPlayer();
         initMediaMetadataRetriever();
@@ -64,6 +72,8 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
         mBtnPause = (Button) findViewById(R.id.btn_pause_play);
         mBtnPause.setOnClickListener(this);
 
+        mTvCurrentPosition = findViewById(R.id.tv_current_position);
+        mTvDuration = findViewById(R.id.tv_duration);
         mSeekBar = findViewById(R.id.seekbar);
         mSeekBar.setOnSeekBarChangeListener(this);
 
@@ -99,15 +109,18 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
             public void onPrepared() {
                 Log.d(TAG, "onPrepared: ");
                 mMediaPlayer.start();
-                if (mMediaPlayer.getVideoHeight() != 0) {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            mLayoutAspectRatio.setAspectRatio(
-                                    mMediaPlayer.getVideoWidth() / (mMediaPlayer.getVideoHeight() * 1.0f));
-                        }
-                    });
-                }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mLayoutAspectRatio.setAspectRatio(
+                                mMediaPlayer.getVideoWidth() / (mMediaPlayer.getVideoHeight() * 1.0f));
+                        mTvCurrentPosition.setText(StringUtils.generateStandardTime(Math.max(mMediaPlayer.getCurrentPosition(), 0)));
+                        mTvDuration.setText(StringUtils.generateStandardTime(Math.max(mMediaPlayer.getDuration(), 0)));
+                        mSeekBar.setMax((int) Math.max(mMediaPlayer.getDuration(), 0));
+                        mSeekBar.setProgress((int)Math.max(mMediaPlayer.getCurrentPosition(), 0));
+                    }
+                });
+                mEventHandler.sendEmptyMessage(MSG_UPDATE_POSITON);
             }
         });
         mMediaPlayer.setOnErrorListener(new AVMediaPlayer.OnErrorListener() {
@@ -148,21 +161,21 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
 
     }
 
-//    @Override
-//    protected void onPause() {
-//        super.onPause();
-//        if (mMediaPlayer != null) {
-//            mMediaPlayer.pause();
-//        }
-//    }
-//
-//    @Override
-//    protected void onResume() {
-//        super.onResume();
-//        if (mMediaPlayer != null) {
-//            mMediaPlayer.resume();
-//        }
-//    }
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mMediaPlayer != null) {
+            mMediaPlayer.pause();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mMediaPlayer != null) {
+            mMediaPlayer.resume();
+        }
+    }
 
     @Override
     protected void onDestroy() {
@@ -171,6 +184,8 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
             mMediaPlayer.release();
             mMediaPlayer = null;
         }
+        mEventHandler.removeCallbacksAndMessages(null);
+        mEventHandler = null;
         super.onDestroy();
     }
 
@@ -204,7 +219,7 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
     @Override
     public void onStopTrackingTouch(SeekBar seekBar) {
         if (mMediaPlayer != null) {
-            mMediaPlayer.seekTo((mProgress * mMediaPlayer.getDuration()) / 100.0f * 1000);
+            mMediaPlayer.seekTo(mProgress);
         }
     }
 
@@ -228,4 +243,60 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
             mMediaPlayer.surfaceDestroyed();
         }
     }
+
+    /**
+     * process Event at Main Looper
+     */
+    private class EventHandler extends Handler {
+
+        private WeakReference<AVMediaPlayerActivity> mWeakActivity;
+
+        public EventHandler(AVMediaPlayerActivity activity, Looper looper) {
+            super(looper);
+            mWeakActivity = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case MSG_UPDATE_POSITON: {
+                    final long currentPosition;
+                    final long duration;
+                    if (mWeakActivity.get() != null && mWeakActivity.get().mMediaPlayer != null) {
+                        currentPosition = mWeakActivity.get().mMediaPlayer.getCurrentPosition();
+                        duration = mWeakActivity.get().mMediaPlayer.getDuration();
+                    } else {
+                        currentPosition = 0;
+                        duration = 0;
+                    }
+
+                    if (getLooper() == Looper.getMainLooper()) {
+                        if (mWeakActivity.get() != null) {
+                            mWeakActivity.get().mTvCurrentPosition.setText(StringUtils.generateStandardTime(currentPosition));
+                            mWeakActivity.get().mSeekBar.setProgress((int) currentPosition);
+                        }
+                    } else {
+                        if (mWeakActivity.get() != null) {
+                            mWeakActivity.get().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (mWeakActivity.get() != null) {
+                                        mWeakActivity.get().mTvCurrentPosition.setText(StringUtils.generateStandardTime(currentPosition));
+                                        mWeakActivity.get().mSeekBar.setProgress((int) currentPosition);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    sendEmptyMessageDelayed(MSG_UPDATE_POSITON, 300);
+                    break;
+                }
+
+                default: {
+                    break;
+                }
+            }
+        }
+    }
+
 }
