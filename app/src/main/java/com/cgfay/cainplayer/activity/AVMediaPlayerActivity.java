@@ -19,11 +19,13 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.cgfay.media.Medadata.AVMediaMetadataRetriever;
-import com.cgfay.media.MediaPlayer.AVMediaPlayer;
+import com.cgfay.media.CainMediaPlayer;
 import com.cgfay.cainplayer.R;
 import com.cgfay.cainplayer.widget.AspectRatioLayout;
+import com.cgfay.media.Medadata.CainMediaMetadata;
 import com.cgfay.utilslibrary.utils.StringUtils;
 
+import java.io.IOException;
 import java.lang.ref.WeakReference;
 
 public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnClickListener,
@@ -49,7 +51,7 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
     private AspectRatioLayout mLayoutAspectRatio;
     private SurfaceView mSurfaceView;
 
-    private AVMediaPlayer mMediaPlayer;
+    private CainMediaPlayer mCainMediaPlayer;
 
     private EventHandler mEventHandler;
 
@@ -102,40 +104,49 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
         if (TextUtils.isEmpty(mPath)) {
             return;
         }
-        mMediaPlayer = new AVMediaPlayer();
-        mMediaPlayer.setDataSource(mPath);
-        mMediaPlayer.setOnPreparedListener(new AVMediaPlayer.OnPreparedListener() {
+        mCainMediaPlayer = new CainMediaPlayer();
+        try {
+            mCainMediaPlayer.setDataSource(mPath);
+        } catch (Exception e) {
+
+        }
+        mCainMediaPlayer.setOnPreparedListener(new CainMediaPlayer.OnPreparedListener() {
             @Override
-            public void onPrepared() {
+            public void onPrepared(CainMediaPlayer mp) {
                 Log.d(TAG, "onPrepared: ");
-                mMediaPlayer.start();
+                mCainMediaPlayer.start();
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         mLayoutAspectRatio.setAspectRatio(
-                                mMediaPlayer.getVideoWidth() / (mMediaPlayer.getVideoHeight() * 1.0f));
-                        mTvCurrentPosition.setText(StringUtils.generateStandardTime(Math.max(mMediaPlayer.getCurrentPosition(), 0)));
-                        mTvDuration.setText(StringUtils.generateStandardTime(Math.max(mMediaPlayer.getDuration(), 0)));
-                        mSeekBar.setMax((int) Math.max(mMediaPlayer.getDuration(), 0));
-                        mSeekBar.setProgress((int)Math.max(mMediaPlayer.getCurrentPosition(), 0));
+                                mCainMediaPlayer.getVideoWidth() / (mCainMediaPlayer.getVideoHeight() * 1.0f));
+                        mTvCurrentPosition.setText(StringUtils.generateStandardTime(Math.max(mCainMediaPlayer.getCurrentPosition(), 0)));
+                        mTvDuration.setText(StringUtils.generateStandardTime(Math.max(mCainMediaPlayer.getDuration(), 0)));
+                        mSeekBar.setMax((int) Math.max(mCainMediaPlayer.getDuration(), 0));
+                        mSeekBar.setProgress((int)Math.max(mCainMediaPlayer.getCurrentPosition(), 0));
                     }
                 });
                 mEventHandler.sendEmptyMessage(MSG_UPDATE_POSITON);
             }
         });
-        mMediaPlayer.setOnErrorListener(new AVMediaPlayer.OnErrorListener() {
+        mCainMediaPlayer.setOnErrorListener(new CainMediaPlayer.OnErrorListener() {
             @Override
-            public void onError(int code, String msg) {
-                Log.d(TAG, "onError: code = " + code + ", msg = " + msg);
+            public boolean onError(CainMediaPlayer mp, int what, int extra) {
+                Log.d(TAG, "onError: what = " + what + ", msg = " + extra);
+                return false;
             }
         });
-        mMediaPlayer.setOnCompletionListener(new AVMediaPlayer.OnCompletionListener() {
+        mCainMediaPlayer.setOnCompletionListener(new CainMediaPlayer.OnCompletionListener() {
             @Override
-            public void onCompleted() {
+            public void onCompletion(CainMediaPlayer mp) {
 
             }
         });
-        mMediaPlayer.prepare();
+        try {
+            mCainMediaPlayer.prepareAsync();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void initMediaMetadataRetriever() {
@@ -153,7 +164,10 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
                     @Override
                     public void run() {
                         mImageCover.setImageBitmap(bitmap);
-                        mTextMetadata.setText(mMetadataRetriever.getMetadata().toString());
+                        CainMediaMetadata metadata = mMetadataRetriever.getMetadata();
+                        if (metadata != null) {
+                            mTextMetadata.setText(metadata.toString());
+                        }
                     }
                 });
             }
@@ -164,25 +178,25 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
     @Override
     protected void onPause() {
         super.onPause();
-        if (mMediaPlayer != null) {
-            mMediaPlayer.pause();
+        if (mCainMediaPlayer != null) {
+            mCainMediaPlayer.pause();
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (mMediaPlayer != null) {
-            mMediaPlayer.resume();
+        if (mCainMediaPlayer != null) {
+            mCainMediaPlayer.resume();
         }
     }
 
     @Override
     protected void onDestroy() {
-        if (mMediaPlayer != null) {
-            mMediaPlayer.stop();
-            mMediaPlayer.release();
-            mMediaPlayer = null;
+        if (mCainMediaPlayer != null) {
+            mCainMediaPlayer.stop();
+            mCainMediaPlayer.release();
+            mCainMediaPlayer = null;
         }
         mEventHandler.removeCallbacksAndMessages(null);
         mEventHandler = null;
@@ -193,11 +207,11 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
     public void onClick(View v) {
         int id = v.getId();
         if (id == R.id.btn_pause_play) {
-            if (mMediaPlayer.isPlaying()) {
-                mMediaPlayer.pause();
+            if (mCainMediaPlayer.isPlaying()) {
+                mCainMediaPlayer.pause();
                 mBtnPause.setBackgroundResource(R.drawable.ic_player_play);
             } else {
-                mMediaPlayer.resume();
+                mCainMediaPlayer.resume();
                 mBtnPause.setBackgroundResource(R.drawable.ic_player_pause);
             }
         }
@@ -218,30 +232,26 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
 
     @Override
     public void onStopTrackingTouch(SeekBar seekBar) {
-        if (mMediaPlayer != null) {
-            mMediaPlayer.seekTo(mProgress);
+        if (mCainMediaPlayer != null) {
+            mCainMediaPlayer.seekTo(mProgress);
         }
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        if (mMediaPlayer != null) {
-            mMediaPlayer.setDisplay(holder);
+        if (mCainMediaPlayer != null) {
+            mCainMediaPlayer.setDisplay(holder);
         }
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        if (mMediaPlayer != null) {
-            mMediaPlayer.surfaceChanged(width, height);
-        }
+
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        if (mMediaPlayer != null) {
-            mMediaPlayer.surfaceDestroyed();
-        }
+
     }
 
     /**
@@ -262,9 +272,9 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
                 case MSG_UPDATE_POSITON: {
                     final long currentPosition;
                     final long duration;
-                    if (mWeakActivity.get() != null && mWeakActivity.get().mMediaPlayer != null) {
-                        currentPosition = mWeakActivity.get().mMediaPlayer.getCurrentPosition();
-                        duration = mWeakActivity.get().mMediaPlayer.getDuration();
+                    if (mWeakActivity.get() != null && mWeakActivity.get().mCainMediaPlayer != null) {
+                        currentPosition = mWeakActivity.get().mCainMediaPlayer.getCurrentPosition();
+                        duration = mWeakActivity.get().mCainMediaPlayer.getDuration();
                     } else {
                         currentPosition = 0;
                         duration = 0;

@@ -7,8 +7,7 @@
 
 #include <sync/MediaClock.h>
 #include <SoundTouchWrapper.h>
-#include <PlayerState.h>
-#include <MediaPlayerCallback.h>
+#include <player/PlayerState.h>
 #include <decoder/AudioDecoder.h>
 #include <decoder/VideoDecoder.h>
 
@@ -23,6 +22,7 @@
 #include <android/native_window_jni.h>
 #include <sync/MediaSync.h>
 #include <convertor/AudioResampler.h>
+#include <player/AVMessageQueue.h>
 
 
 class MediaPlayer : public Runnable {
@@ -31,13 +31,15 @@ public:
 
     virtual ~MediaPlayer();
 
-    void setPlayerCallback(MediaPlayerCallback *playerCallback);
+    status_t reset();
 
-    void setDataSource(const char *url);
+    void setDataSource(const char *url, int64_t offset = 0, const char *headers = NULL);
 
     void setVideoDevice(VideoDevice *videoDevice);
 
-    void prepare();
+    status_t prepare();
+
+    status_t prepareAsync();
 
     void start();
 
@@ -69,10 +71,16 @@ public:
 
     int isPlaying();
 
+    int isLooping();
+
+    int getMetadata(AVDictionary **metadata);
+
+    AVMessageQueue *getMessageQueue();
+
     void pcmQueueCallback(uint8_t *stream, int len);
 
 protected:
-    virtual void run();
+    void run() override;
 
 private:
     int readPackets();
@@ -89,12 +97,13 @@ private:
     Condition mCondition;
     Thread *readThread;                     // 读数据包线程
 
-    const char *url;                        // 文件路径
     PlayerState *playerState;               // 播放器状态
-    MediaPlayerCallback *playerCallback;    // 播放器回调
+
+    AVMessageQueue *messageQueue;           // 播放器消息队列
+
     AudioDecoder *audioDecoder;             // 音频解码器
     VideoDecoder *videoDecoder;             // 视频解码器
-    bool mExit;
+    bool mExit;                             // state for reading packets thread exited if not
 
     // 解复用处理
     AVFormatContext *pFormatCtx;            // 解码上下文

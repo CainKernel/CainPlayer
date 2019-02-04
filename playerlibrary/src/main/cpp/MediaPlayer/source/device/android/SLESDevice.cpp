@@ -25,6 +25,7 @@ SLESDevice::SLESDevice() {
 }
 
 SLESDevice::~SLESDevice() {
+    mMutex.lock();
     memset(&audioDeviceSpec, 0, sizeof(AudioDeviceSpec));
     if (slPlayerObject != NULL) {
         (*slPlayerObject)->Destroy(slPlayerObject);
@@ -44,6 +45,7 @@ SLESDevice::~SLESDevice() {
         slObject = NULL;
         slEngine = NULL;
     }
+    mMutex.unlock();
 }
 
 void SLESDevice::start() {
@@ -61,13 +63,12 @@ void SLESDevice::start() {
 }
 
 void SLESDevice::stop() {
+
     mMutex.lock();
     abortRequest = 1;
-    if (slPlayItf) {
-        (*slPlayItf)->SetPlayState(slPlayItf, SL_PLAYSTATE_STOPPED);
-    }
     mCondition.signal();
     mMutex.unlock();
+
     if (audioThread) {
         audioThread->join();
         delete audioThread;
@@ -213,7 +214,9 @@ void SLESDevice::run() {
             }
         }
     }
-    ALOGD("audio play thread exit!");
+    if (slPlayItf) {
+        (*slPlayItf)->SetPlayState(slPlayItf, SL_PLAYSTATE_STOPPED);
+    }
 }
 
 

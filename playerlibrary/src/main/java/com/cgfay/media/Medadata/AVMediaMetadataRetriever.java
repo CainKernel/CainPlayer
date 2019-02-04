@@ -63,10 +63,10 @@ public class AVMediaMetadataRetriever {
      * 获取媒体数据
      * @return
      */
-    public AVMediaMetadata getMetadata() {
+    public CainMediaMetadata getMetadata() {
         HashMap<String, String> hashMap = nativeGetMetadata();
         if (hashMap != null) {
-            AVMediaMetadata mediaMetadata = new AVMediaMetadata(hashMap);
+            CainMediaMetadata mediaMetadata = new CainMediaMetadata(hashMap);
             return mediaMetadata;
         }
         return null;

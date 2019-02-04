@@ -7,7 +7,7 @@
 
 
 #include <decoder/MediaDecoder.h>
-#include <PlayerState.h>
+#include <player/PlayerState.h>
 #include <sync/MediaClock.h>
 
 class VideoDecoder : public MediaDecoder {
@@ -39,6 +39,7 @@ private:
     AVFormatContext *pFormatCtx;    // 解复用上下文
     FrameQueue *frameQueue;         // 帧队列
 
+    bool mExit;                     // 退出标志
     Thread *decodeThread;           // 解码线程
     MediaClock *masterClock;        // 主时钟
 };

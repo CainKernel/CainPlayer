@@ -11,14 +11,14 @@ AudioDecoder::AudioDecoder(AVCodecContext *avctx, AVStream *stream, int streamIn
 }
 
 AudioDecoder::~AudioDecoder() {
-    stop();
+    mMutex.lock();
     packetPending = 0;
     if (packet) {
         av_packet_free(&packet);
         av_freep(&packet);
         packet = NULL;
     }
-    ALOGI("AudioDecoder destructor");
+    mMutex.unlock();
 }
 
 int AudioDecoder::getAudioFrame(AVFrame *frame) {

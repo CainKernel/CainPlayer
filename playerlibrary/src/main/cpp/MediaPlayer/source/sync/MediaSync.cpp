@@ -5,7 +5,6 @@
 #include "MediaSync.h"
 
 MediaSync::MediaSync(PlayerState *playerState) {
-    Mutex::Autolock lock(mMutex);
     this->playerState = playerState;
     audioDecoder = NULL;
     videoDecoder = NULL;
@@ -13,29 +12,36 @@ MediaSync::MediaSync(PlayerState *playerState) {
     videoClock = new MediaClock();
     extClock = new MediaClock();
 
+    mExit = true;
+    abortRequest = true;
     syncThread = NULL;
 
     forceRefresh = 0;
     maxFrameDuration = 10.0;
     frameTimerRefresh = 1;
     frameTimer = 0;
-    mExit = true;
+
 
     videoDevice = NULL;
     swsContext = NULL;
     mBuffer = NULL;
-    pFrameARGB = av_frame_alloc();
+    pFrameARGB = NULL;
 }
 
 MediaSync::~MediaSync() {
-    Mutex::Autolock lock(mMutex);
+
+}
+
+void MediaSync::reset() {
+    stop();
     playerState = NULL;
     videoDecoder = NULL;
     audioDecoder = NULL;
     videoDevice = NULL;
+
     if (pFrameARGB) {
         av_frame_free(&pFrameARGB);
-        av_freep(&pFrameARGB);
+        av_free(pFrameARGB);
         pFrameARGB = NULL;
     }
     if (mBuffer) {
@@ -52,6 +58,7 @@ void MediaSync::start(VideoDecoder *videoDecoder, AudioDecoder *audioDecoder) {
     mMutex.lock();
     this->videoDecoder = videoDecoder;
     this->audioDecoder = audioDecoder;
+    abortRequest = false;
     mExit = false;
     mCondition.signal();
     mMutex.unlock();
@@ -62,6 +69,11 @@ void MediaSync::start(VideoDecoder *videoDecoder, AudioDecoder *audioDecoder) {
 }
 
 void MediaSync::stop() {
+    mMutex.lock();
+    abortRequest = true;
+    mCondition.signal();
+    mMutex.unlock();
+
     mMutex.lock();
     while (!mExit) {
         mCondition.wait(mMutex);
@@ -135,11 +147,10 @@ MediaClock *MediaSync::getExternalClock() {
 }
 
 void MediaSync::run() {
-    ALOGD("media sync thread start!");
     double remaining_time = 0.0;
     while (true) {
 
-        if (playerState->abortRequest) {
+        if (abortRequest || playerState->abortRequest) {
             if (videoDevice != NULL) {
                 videoDevice->terminate();
             }
@@ -155,7 +166,6 @@ void MediaSync::run() {
         }
     }
 
-    ALOGD("video refresh thread exit!");
     mExit = true;
     mCondition.signal();
 }
@@ -366,6 +376,7 @@ void MediaSync::renderVideo() {
                 if (!mBuffer) {
                     int numBytes = av_image_get_buffer_size(AV_PIX_FMT_BGRA, vp->frame->width, vp->frame->height, 1);
                     mBuffer = (uint8_t *)av_malloc(numBytes * sizeof(uint8_t));
+                    pFrameARGB = av_frame_alloc();
                     av_image_fill_arrays(pFrameARGB->data, pFrameARGB->linesize, mBuffer, AV_PIX_FMT_BGRA,
                                          vp->frame->width, vp->frame->height, 1);
                 }

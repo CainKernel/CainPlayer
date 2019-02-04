@@ -5,7 +5,7 @@
 #ifndef AUDIORESAMPLER_H
 #define AUDIORESAMPLER_H
 
-#include <PlayerState.h>
+#include <player/PlayerState.h>
 #include <sync/MediaSync.h>
 #include <SoundTouchWrapper.h>
 #include <device/AudioDevice.h>

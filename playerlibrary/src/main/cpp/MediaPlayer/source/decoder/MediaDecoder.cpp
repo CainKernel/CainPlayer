@@ -13,8 +13,7 @@ MediaDecoder::MediaDecoder(AVCodecContext *avctx, AVStream *stream, int streamIn
 }
 
 MediaDecoder::~MediaDecoder() {
-    ALOGI("MediaDecoder destructor");
-    stop();
+    mMutex.lock();
     if (packetQueue) {
         packetQueue->flush();
         delete packetQueue;
@@ -26,6 +25,7 @@ MediaDecoder::~MediaDecoder() {
         pCodecCtx = NULL;
     }
     playerState = NULL;
+    mMutex.unlock();
 }
 
 void MediaDecoder::start() {

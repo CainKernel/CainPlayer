@@ -5,7 +5,7 @@
 #ifndef VIDEODEVICE_H
 #define VIDEODEVICE_H
 
-#include <PlayerState.h>
+#include <player/PlayerState.h>
 #include <renderer/Renderer.h>
 
 class VideoDevice {

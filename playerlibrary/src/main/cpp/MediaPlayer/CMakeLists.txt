@@ -16,6 +16,7 @@ add_subdirectory(${soundtouch_dir} soundtouch)
 
 # 添加头文件路径
 include_directories( source
+                     android
                      ${soundtouch_dir} )
 
 # 添加源文件
@@ -49,13 +50,15 @@ add_library( media_player
              source/sync/MediaClock.cpp
              source/sync/MediaSync.cpp
 
-             source/MediaPlayer.cpp
-             source/MediaPlayerCallback.cpp
-             source/PlayerState.cpp
+
+             source/player/AVMessageQueue.cpp
+             source/player/MediaPlayer.cpp
+             source/player/PlayerState.cpp
 
              # controller
-             JniMediaPlayerCallback.cpp
-             MediaPlayerController.cpp)
+             android/CainMediaPlayer.cpp
+             android/JNIHelp.cpp
+             android/com_cgfay_media_CainMediaPlayer.cpp )
 
 # 链接静态库
 target_link_libraries( media_player

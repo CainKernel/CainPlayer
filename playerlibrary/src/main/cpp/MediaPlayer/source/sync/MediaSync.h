@@ -6,7 +6,7 @@
 #define MEDIASYNC_H
 
 #include <sync/MediaClock.h>
-#include <PlayerState.h>
+#include <player/PlayerState.h>
 #include <decoder/VideoDecoder.h>
 #include <decoder/AudioDecoder.h>
 
@@ -21,6 +21,8 @@ public:
     MediaSync(PlayerState *playerState);
 
     virtual ~MediaSync();
+
+    void reset();
 
     void start(VideoDecoder *videoDecoder, AudioDecoder *audioDecoder);
 
@@ -67,6 +69,7 @@ private:
 
 private:
     PlayerState *playerState;               // 播放器状态
+    bool abortRequest;                      // 停止
     bool mExit;
 
     MediaClock *audioClock;                 // 音频时钟

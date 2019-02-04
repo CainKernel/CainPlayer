@@ -24,6 +24,10 @@ void PlayerState::init() {
     memset(codec_opts, 0, sizeof(AVDictionary));
     resample_opts = (AVDictionary *) malloc(sizeof(AVDictionary));
     memset(resample_opts, 0, sizeof(AVDictionary));
+
+    url = NULL;
+    headers = NULL;
+
     audioCodecName = NULL;
     videoCodecName = NULL;
 }
@@ -48,6 +52,15 @@ void PlayerState::reset() {
         av_dict_free(&resample_opts);
     }
 
+    if (url) {
+        av_freep(&url);
+        url = NULL;
+    }
+    offset = 0;
+    if (headers) {
+        av_freep(&headers);
+        headers = NULL;
+    }
     if (audioCodecName != NULL) {
         av_freep(&audioCodecName);
         audioCodecName = NULL;
@@ -57,7 +70,7 @@ void PlayerState::reset() {
         videoCodecName = NULL;
     }
     abortRequest = 1;
-    pauseRequest = 0;
+    pauseRequest = 1;
     seekByBytes = 0;
     syncType = AV_SYNC_AUDIO;
     startTime = AV_NOPTS_VALUE;

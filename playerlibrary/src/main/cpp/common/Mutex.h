@@ -26,8 +26,7 @@
 #include <time.h>
 
 #include <pthread.h>
-
-typedef int32_t     status_t;
+#include "Errors.h"
 
 class Condition;
 

@@ -8,11 +8,11 @@ import java.util.TimeZone;
 /**
  * metadata数据对象
  */
-public class AVMediaMetadata {
+public class CainMediaMetadata {
 
     private HashMap<String, String> mParcelMetadata;
 
-    public AVMediaMetadata(HashMap<String, String> metadata) {
+    public CainMediaMetadata(HashMap<String, String> metadata) {
         mParcelMetadata = metadata;
     }
 
@@ -79,8 +79,8 @@ public class AVMediaMetadata {
 
     @Override
     public String toString() {
-        return "AVMediaMetadata{" +
-                "mParcelMetadata=" + mParcelMetadata +
-                '}';
+        return "MediaMetadata{ \n" +
+                "mParcelMetadata = " + mParcelMetadata.toString() +
+                "\n}";
     }
 }

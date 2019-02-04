@@ -53,8 +53,6 @@ extern "C" {
 
 #define EXTERNAL_CLOCK_SPEED_STEP 0.001
 
-
-
 #define AUDIO_DIFF_AVG_NB   20
 
 #define SAMPLE_CORRECTION_PERCENT_MAX 10
@@ -88,6 +86,10 @@ public:
     AVDictionary *format_opts;      // 解复用option参数
     AVDictionary *codec_opts;       // 解码option参数
     AVDictionary *resample_opts;    // 重采样option参数
+
+    const char *url;                // 文件路径
+    int64_t offset;                 // 文件偏移量
+    const char *headers;            // 文件头信息
 
     const char *audioCodecName;     // 指定音频解码器名称
     const char *videoCodecName;     // 指定视频解码器名称

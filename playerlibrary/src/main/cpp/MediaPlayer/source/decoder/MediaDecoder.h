@@ -6,7 +6,7 @@
 #define MEDIADECODER_H
 
 #include <AndroidLog.h>
-#include <PlayerState.h>
+#include <player/PlayerState.h>
 #include <queue/PacketQueue.h>
 #include <queue/FrameQueue.h>
 

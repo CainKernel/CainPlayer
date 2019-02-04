@@ -9,13 +9,12 @@ VideoDecoder::VideoDecoder(AVFormatContext *pFormatCtx, AVCodecContext *avctx,
         : MediaDecoder(avctx, stream, streamIndex, playerState) {
     this->pFormatCtx = pFormatCtx;
     frameQueue = new FrameQueue(VIDEO_QUEUE_SIZE, 1);
+    mExit = true;
     decodeThread = NULL;
     masterClock = NULL;
 }
 
 VideoDecoder::~VideoDecoder() {
-    ALOGI("VideoDecoder destructor");
-    stop();
     mMutex.lock();
     pFormatCtx = NULL;
     if (frameQueue) {
@@ -40,6 +39,7 @@ void VideoDecoder::start() {
     if (!decodeThread) {
         decodeThread = new Thread(this);
         decodeThread->start();
+        mExit = false;
     }
 }
 
@@ -48,6 +48,11 @@ void VideoDecoder::stop() {
     if (frameQueue) {
         frameQueue->abort();
     }
+    mMutex.lock();
+    while (!mExit) {
+        mCondition.wait(mMutex);
+    }
+    mMutex.unlock();
     if (decodeThread) {
         decodeThread->join();
         delete decodeThread;
@@ -93,11 +98,15 @@ int VideoDecoder::decodeVideo() {
     AVRational frame_rate = av_guess_frame_rate(pFormatCtx, pStream, NULL);
 
     if (!frame) {
+        mExit = true;
+        mCondition.signal();
         return AVERROR(ENOMEM);
     }
 
     AVPacket *packet = av_packet_alloc();
     if (!packet) {
+        mExit = true;
+        mCondition.signal();
         return AVERROR(ENOMEM);
     }
 
@@ -113,7 +122,8 @@ int VideoDecoder::decodeVideo() {
         }
 
         if (packetQueue->getPacket(packet) < 0) {
-            return -1;
+            ret = -1;
+            break;
         }
 
         // 送去解码
@@ -202,6 +212,8 @@ int VideoDecoder::decodeVideo() {
     av_free(packet);
     packet = NULL;
 
-    ALOGD("video decode thread exit!");
+    mExit = true;
+    mCondition.signal();
+
     return ret;
 }

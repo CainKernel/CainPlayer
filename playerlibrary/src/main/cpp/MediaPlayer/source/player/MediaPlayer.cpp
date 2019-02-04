@@ -49,8 +49,8 @@ static int lockmgrCallback(void **mtx, enum AVLockOp op) {
 MediaPlayer::MediaPlayer() {
     av_register_all();
     avformat_network_init();
-    url = NULL;
     playerState = new PlayerState();
+    messageQueue = new AVMessageQueue();
     mDuration = -1;
     audioDecoder = NULL;
     videoDecoder = NULL;
@@ -79,11 +79,14 @@ MediaPlayer::MediaPlayer() {
 MediaPlayer::~MediaPlayer() {
     avformat_network_deinit();
     av_lockmgr_register(NULL);
+}
+
+status_t MediaPlayer::reset() {
     stop();
-    mMutex.lock();
-    if (playerCallback != NULL) {
-        delete playerCallback;
-        playerCallback = NULL;
+    if (mediaSync) {
+        mediaSync->reset();
+        delete mediaSync;
+        mediaSync = NULL;
     }
     if (audioDecoder != NULL) {
         audioDecoder->stop();
@@ -104,36 +107,29 @@ MediaPlayer::~MediaPlayer() {
         delete audioResampler;
         audioResampler = NULL;
     }
-    if (mediaSync) {
-        mediaSync->stop();
-        delete mediaSync;
-        mediaSync = NULL;
-    }
     if (pFormatCtx != NULL) {
         avformat_close_input(&pFormatCtx);
         avformat_free_context(pFormatCtx);
         pFormatCtx = NULL;
     }
-    if (url != NULL) {
-        av_freep(&url);
-        url = NULL;
+    if (messageQueue) {
+        messageQueue->release();
+        delete messageQueue;
     }
     if (playerState) {
         delete playerState;
         playerState = NULL;
     }
-    mMutex.unlock();
-    ALOGD("MediaPlayer Destructor");
+    return NO_ERROR;
 }
 
-void MediaPlayer::setPlayerCallback(MediaPlayerCallback *playerCallback) {
+void MediaPlayer::setDataSource(const char *url, int64_t offset, const char *headers) {
     Mutex::Autolock lock(mMutex);
-    this->playerCallback = playerCallback;
-}
-
-void MediaPlayer::setDataSource(const char *url) {
-    Mutex::Autolock lock(mMutex);
-    this->url = av_strdup(url);
+    playerState->url = av_strdup(url);
+    playerState->offset = offset;
+    if (headers) {
+        playerState->headers = av_strdup(headers);
+    }
 }
 
 void MediaPlayer::setVideoDevice(VideoDevice *videoDevice) {
@@ -141,17 +137,29 @@ void MediaPlayer::setVideoDevice(VideoDevice *videoDevice) {
     mediaSync->setVideoDevice(videoDevice);
 }
 
-void MediaPlayer::prepare() {
+status_t MediaPlayer::prepare() {
     Mutex::Autolock lock(mMutex);
-    if (!url) {
-        return;
+    if (!playerState->url) {
+        return BAD_VALUE;
     }
     playerState->abortRequest = 0;
     if (!readThread) {
         readThread = new Thread(this);
         readThread->start();
     }
+    return NO_ERROR;
+}
 
+status_t MediaPlayer::prepareAsync() {
+    Mutex::Autolock lock(mMutex);
+    if (!playerState->url) {
+        return BAD_VALUE;
+    }
+    // 发送消息请求准备
+    if (messageQueue) {
+        messageQueue->postMessage(MSG_REQUEST_PREPARE);
+    }
+    return NO_ERROR;
 }
 
 void MediaPlayer::start() {
@@ -196,12 +204,13 @@ void MediaPlayer::seekTo(float timeMs) {
     if (!playerState->realTime && mDuration < 0) {
         return;
     }
-    mMutex.lock();
 
     // 等待上一次操作完成
+    mMutex.lock();
     while (playerState->seekRequest) {
         mCondition.wait(mMutex);
     }
+    mMutex.unlock();
 
     if (!playerState->seekRequest) {
         int64_t start_time = 0;
@@ -216,7 +225,7 @@ void MediaPlayer::seekTo(float timeMs) {
         playerState->seekRequest = 1;
         mCondition.signal();
     }
-    mMutex.unlock();
+
 }
 
 void MediaPlayer::setLooping(int looping) {
@@ -310,12 +319,29 @@ int MediaPlayer::isPlaying() {
     return !playerState->abortRequest && !playerState->pauseRequest;
 }
 
+int MediaPlayer::isLooping() {
+    return playerState->loop;
+}
+
+int MediaPlayer::getMetadata(AVDictionary **metadata) {
+    if (!pFormatCtx) {
+        return -1;
+    }
+    // TODO getMetadata
+    return NO_ERROR;
+}
+
 static int avformat_interrupt_cb(void *ctx) {
     PlayerState *playerState = (PlayerState *) ctx;
     if (playerState->abortRequest) {
         return AVERROR_EOF;
     }
     return 0;
+}
+
+AVMessageQueue *MediaPlayer::getMessageQueue() {
+    Mutex::Autolock lock(mMutex);
+    return messageQueue;
 }
 
 void MediaPlayer::run() {
@@ -347,19 +373,33 @@ int MediaPlayer::readPackets() {
             scan_all_pmts_set = 1;
         }
 
+        // 处理文件头
+        if (playerState->headers) {
+            av_dict_set(&playerState->format_opts, "headers", playerState->headers, 0);
+        }
+        // 处理文件偏移量
+        if (playerState->offset > 0) {
+            pFormatCtx->skip_initial_bytes = playerState->offset;
+        }
+
         // 设置rtmp/rtsp的超时值
-        if (av_stristart(url, "rtmp", NULL) || av_stristart(url, "rtsp", NULL)) {
+        if (av_stristart(playerState->url, "rtmp", NULL) || av_stristart(playerState->url, "rtsp", NULL)) {
             // There is total different meaning for 'timeout' option in rtmp
             av_log(NULL, AV_LOG_WARNING, "remove 'timeout' option for rtmp.\n");
             av_dict_set(&playerState->format_opts, "timeout", NULL, 0);
         }
 
         // 打开文件
-        ret = avformat_open_input(&pFormatCtx, url, NULL, &playerState->format_opts);
+        ret = avformat_open_input(&pFormatCtx, playerState->url, NULL, &playerState->format_opts);
         if (ret < 0) {
-            printError(url, ret);
+            printError(playerState->url, ret);
             ret = -1;
             break;
+        }
+
+        // 打开文件回调
+        if (messageQueue) {
+            messageQueue->postMessage(MSG_OPEN_INPUT);
         }
 
         if (scan_all_pmts_set) {
@@ -392,9 +432,14 @@ int MediaPlayer::readPackets() {
 
         if (ret < 0) {
             av_log(NULL, AV_LOG_WARNING,
-                   "%s: could not find codec parameters\n", url);
+                   "%s: could not find codec parameters\n", playerState->url);
             ret = -1;
             break;
+        }
+
+        // 查找媒体流信息回调
+        if (messageQueue) {
+            messageQueue->postMessage(MSG_FIND_STREAM_INFO);
         }
 
         // 判断是否实时流，判断是否需要设置无限缓冲区
@@ -436,7 +481,7 @@ int MediaPlayer::readPackets() {
             playerState->mMutex.unlock();
             if (ret < 0) {
                 av_log(NULL, AV_LOG_WARNING, "%s: could not seek to position %0.3f\n",
-                       url, (double)timestamp / AV_TIME_BASE);
+                       playerState->url, (double)timestamp / AV_TIME_BASE);
             }
         }
 
@@ -472,7 +517,7 @@ int MediaPlayer::readPackets() {
         // 如果音频流和视频流都没有找到，则直接退出
         if (audioIndex == -1 && videoIndex == -1) {
             av_log(NULL, AV_LOG_WARNING,
-                   "%s: could not find audio and video stream\n", url);
+                   "%s: could not find audio and video stream\n", playerState->url);
             ret = -1;
             break;
         }
@@ -492,6 +537,12 @@ int MediaPlayer::readPackets() {
             break;
         }
         ret = 0;
+
+        // 准备解码器消息回调
+        if (messageQueue) {
+            messageQueue->postMessage(MSG_PREPARE_DECODER);
+        }
+
     } while (false);
     mMutex.unlock();
 
@@ -499,20 +550,35 @@ int MediaPlayer::readPackets() {
     if (ret < 0) {
         mExit = true;
         mCondition.signal();
-        if (playerCallback) {
-            playerCallback->onError(0x01, "prepare decoder failed!");
+        if (messageQueue) {
+            const char errorMsg[] = "prepare decoder failed!";
+            messageQueue->postMessage(MSG_ERROR, 0, 0,
+                    (void *)errorMsg, sizeof(errorMsg) / errorMsg[0]);
         }
         return -1;
     }
 
+    if (videoDecoder) {
+        AVCodecParameters *codecpar = videoDecoder->getStream()->codecpar;
+        if (messageQueue) {
+            messageQueue->postMessage(MSG_VIDEO_SIZE_CHANGED,
+                    codecpar->width, codecpar->height);
+            messageQueue->postMessage(MSG_SAR_CHANGED, codecpar->sample_aspect_ratio.num,
+                    codecpar->sample_aspect_ratio.den);
+        }
+    }
+
     // 准备完成回调
-    if (playerCallback) {
-        playerCallback->onPrepared();
+    if (messageQueue) {
+        messageQueue->postMessage(MSG_PREPARED);
     }
 
     // 视频解码器开始解码
     if (videoDecoder != NULL) {
         videoDecoder->start();
+        if (messageQueue) {
+            messageQueue->postMessage(MSG_VIDEO_START);
+        }
     } else {
         if (playerState->syncType == AV_SYNC_VIDEO) {
             playerState->syncType = AV_SYNC_AUDIO;
@@ -522,6 +588,9 @@ int MediaPlayer::readPackets() {
     // 音频解码器开始解码
     if (audioDecoder != NULL) {
         audioDecoder->start();
+        if (messageQueue) {
+            messageQueue->postMessage(MSG_AUDIO_START);
+        }
     } else {
         if (playerState->syncType == AV_SYNC_AUDIO) {
             playerState->syncType = AV_SYNC_EXTERNAL;
@@ -561,6 +630,21 @@ int MediaPlayer::readPackets() {
 
     // 开始同步
     mediaSync->start(videoDecoder, audioDecoder);
+
+    // 等待开始
+    if (playerState->pauseRequest) {
+        // 请求开始
+        if (messageQueue) {
+            messageQueue->postMessage(MSG_REQUEST_START);
+        }
+        while ((!playerState->abortRequest) && playerState->pauseRequest) {
+            av_usleep(10 * 1000);
+        }
+    }
+
+    if (messageQueue) {
+        messageQueue->postMessage(MSG_STARTED);
+    }
 
     // 读数据包流程
     eof = 0;
@@ -604,7 +688,7 @@ int MediaPlayer::readPackets() {
             ret = avformat_seek_file(pFormatCtx, -1, seek_min, seek_target, seek_max, playerState->seekFlags);
             playerState->mMutex.unlock();
             if (ret < 0) {
-                av_log(NULL, AV_LOG_ERROR, "%s: error while seeking\n", url);
+                av_log(NULL, AV_LOG_ERROR, "%s: error while seeking\n", playerState->url);
             } else {
                 if (audioDecoder) {
                     audioDecoder->flush();
@@ -626,8 +710,9 @@ int MediaPlayer::readPackets() {
             mCondition.signal();
             eof = 0;
             // 定位完成回调通知
-            if (playerCallback) {
-                playerCallback->onSeekComplete();
+            if (messageQueue) {
+                messageQueue->postMessage(MSG_SEEK_COMPLETE,
+                        (int)av_rescale(seek_target, 1000, AV_TIME_BASE), ret);
             }
         }
 
@@ -701,7 +786,6 @@ int MediaPlayer::readPackets() {
         }
     }
 
-    ALOGD("read packets thread exit!");
     if (audioDecoder) {
         audioDecoder->stop();
     }
@@ -718,12 +802,14 @@ int MediaPlayer::readPackets() {
     mCondition.signal();
 
     if (ret < 0) {
-        if (playerCallback) {
-            playerCallback->onError(0x02, "error when reading packets!");
+        if (messageQueue) {
+            const char errorMsg[] = "error when reading packets!";
+            messageQueue->postMessage(MSG_ERROR, 0, 0,
+                    (void *)errorMsg, sizeof(errorMsg) / errorMsg[0]);
         }
     } else { // 播放完成
-        if (playerCallback) {
-            playerCallback->onComplete();
+        if (messageQueue) {
+            messageQueue->postMessage(MSG_COMPLETED);
         }
     }
 
@@ -851,8 +937,10 @@ int MediaPlayer::prepareDecoder(int streamIndex) {
 
     // 准备失败，则需要释放创建的解码上下文
     if (ret < 0) {
-        if (playerCallback != NULL) {
-            playerCallback->onError(0x01, "failed to open stream!");
+        if (messageQueue) {
+            const char errorMsg[] = "failed to open stream!";
+            messageQueue->postMessage(MSG_ERROR, 0, 0,
+                    (void *)errorMsg, sizeof(errorMsg) / errorMsg[0]);
         }
         avcodec_free_context(&avctx);
     }
