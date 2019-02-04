@@ -57,18 +57,6 @@ void PlayerState::reset() {
         url = NULL;
     }
     offset = 0;
-    if (headers) {
-        av_freep(&headers);
-        headers = NULL;
-    }
-    if (audioCodecName != NULL) {
-        av_freep(&audioCodecName);
-        audioCodecName = NULL;
-    }
-    if (videoCodecName != NULL) {
-        av_freep(&videoCodecName);
-        videoCodecName = NULL;
-    }
     abortRequest = 1;
     pauseRequest = 1;
     seekByBytes = 0;

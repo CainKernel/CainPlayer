@@ -9,6 +9,10 @@
 #include <JNIHelp.h>
 #include <CainMediaPlayer.h>
 
+extern "C" {
+#include <libavcodec/jni.h>
+}
+
 const char *CLASS_NAME = "com/cgfay/media/CainMediaPlayer";
 
 // -------------------------------------------------------------------------------------------------
@@ -541,6 +545,7 @@ static int register_com_cgfay_media_CainMediaPlayer(JNIEnv *env) {
 
 extern "C"
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
+    av_jni_set_java_vm(vm, NULL);
     javaVM = vm;
     JNIEnv *env;
     if (vm->GetEnv((void **) &env, JNI_VERSION_1_4) != JNI_OK) {
