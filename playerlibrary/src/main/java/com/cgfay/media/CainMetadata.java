@@ -1,4 +1,4 @@
-package com.cgfay.media.Medadata;
+package com.cgfay.media;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -8,11 +8,11 @@ import java.util.TimeZone;
 /**
  * metadata数据对象
  */
-public class CainMediaMetadata {
+public class CainMetadata {
 
     private HashMap<String, String> mParcelMetadata;
 
-    public CainMediaMetadata(HashMap<String, String> metadata) {
+    public CainMetadata(HashMap<String, String> metadata) {
         mParcelMetadata = metadata;
     }
 

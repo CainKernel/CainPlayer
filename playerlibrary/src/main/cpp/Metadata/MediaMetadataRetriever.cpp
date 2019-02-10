@@ -30,6 +30,12 @@ int MediaMetadataRetriever::setDataSource(const char *url) {
     return setDataSource(&state, url, NULL);
 }
 
+status_t
+MediaMetadataRetriever::setDataSource(const char *url, int64_t offset, const char *headers) {
+    Mutex::Autolock lock(mLock);
+    return setDataSource(&state, url, headers);
+}
+
 const char* MediaMetadataRetriever::getMetadata(const char *key) {
     Mutex::Autolock lock(mLock);
     return extractMetadata(&state, key);
@@ -45,7 +51,7 @@ int MediaMetadataRetriever::getMetadata(AVDictionary **metadata) {
     return getMetadata(&state, metadata);
 }
 
-int MediaMetadataRetriever::getCoverPicture(AVPacket *pkt) {
+int MediaMetadataRetriever::getEmbeddedPicture(AVPacket *pkt) {
     Mutex::Autolock lock(mLock);
     return getCoverPicture(&state, pkt);
 }

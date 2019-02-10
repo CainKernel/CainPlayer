@@ -7,7 +7,7 @@
 
 #include <cstdint>
 #include <Mutex.h>
-#include <Metadata.h>
+#include "Metadata.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -51,6 +51,8 @@ public:
     // 设置数据源
     int setDataSource(const char *url);
 
+    status_t setDataSource(const char *url, int64_t offset, const char *headers);
+
     // 提取metadata数据
     const char *getMetadata(const char *key);
 
@@ -61,7 +63,7 @@ public:
     int getMetadata(AVDictionary **metadata);
 
     // 提取专辑/封面图片
-    int getCoverPicture(AVPacket *pkt);
+    int getEmbeddedPicture(AVPacket *pkt);
 
     // 取得某个时刻的图像
     int getFrame(int64_t timeUs, AVPacket *pkt);

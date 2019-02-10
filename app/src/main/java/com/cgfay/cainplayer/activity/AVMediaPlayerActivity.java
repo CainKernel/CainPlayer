@@ -1,6 +1,7 @@
 package com.cgfay.cainplayer.activity;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -18,14 +19,13 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import com.cgfay.media.Medadata.AVMediaMetadataRetriever;
+import com.cgfay.media.CainMediaMetadataRetriever;
 import com.cgfay.media.CainMediaPlayer;
 import com.cgfay.cainplayer.R;
 import com.cgfay.cainplayer.widget.AspectRatioLayout;
-import com.cgfay.media.Medadata.CainMediaMetadata;
+import com.cgfay.media.CainMetadata;
 import com.cgfay.utilslibrary.utils.StringUtils;
 
-import java.io.IOException;
 import java.lang.ref.WeakReference;
 
 public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnClickListener,
@@ -55,7 +55,7 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
 
     private EventHandler mEventHandler;
 
-    private AVMediaMetadataRetriever mMetadataRetriever;
+    private CainMediaMetadataRetriever mMetadataRetriever;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -157,14 +157,23 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
             @Override
             public void run() {
                 // 异步截屏回调
-                mMetadataRetriever = new AVMediaMetadataRetriever();
+                mMetadataRetriever = new CainMediaMetadataRetriever();
                 mMetadataRetriever.setDataSource(mPath);
-                final Bitmap bitmap = mMetadataRetriever.getCoverPicture();
+                byte[] data = mMetadataRetriever.getEmbeddedPicture();
+                if (data != null) {
+                    final Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mImageCover.setImageBitmap(bitmap);
+                        }
+                    });
+                }
+
+                final CainMetadata metadata = mMetadataRetriever.getMetadata();
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        mImageCover.setImageBitmap(bitmap);
-                        CainMediaMetadata metadata = mMetadataRetriever.getMetadata();
                         if (metadata != null) {
                             mTextMetadata.setText(metadata.toString());
                         }
@@ -197,6 +206,10 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
             mCainMediaPlayer.stop();
             mCainMediaPlayer.release();
             mCainMediaPlayer = null;
+        }
+        if (mMetadataRetriever != null) {
+            mMetadataRetriever.release();
+            mMetadataRetriever = null;
         }
         mEventHandler.removeCallbacksAndMessages(null);
         mEventHandler = null;
