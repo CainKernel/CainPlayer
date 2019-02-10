@@ -1,6 +1,11 @@
 # CainPlayer
 基于ffplay逻辑实现的简单播放器。
 
+# 截图
+![本地视频](https://github.com/CainKernel/CainPlayer/blob/master/screenshot/native_video.png)
+
+![网络视频](https://github.com/CainKernel/CainPlayer/blob/master/screenshot/rtmp_video.png)
+
 # 讲解文章
 [第零章 基础公共类的封装](https://www.jianshu.com/p/9003caa6683f)
 
