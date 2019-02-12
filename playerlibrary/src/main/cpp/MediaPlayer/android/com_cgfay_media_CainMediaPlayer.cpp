@@ -486,41 +486,35 @@ jint CainMediaPlayer_getVideoHeight(JNIEnv *env, jobject thiz) {
     return mp->getVideoHeight();
 }
 
-// FIXME: deprecated
-jobject CainMediaPlayer_getFrameAt(JNIEnv *env, jobject thiz, jfloat msec) {
-    return NULL;
-}
-
 static const JNINativeMethod gMethods[] = {
-        {"setDataSource", "(Ljava/lang/String;)V", (void *)CainMediaPlayer_setDataSource},
+        {"_setDataSource", "(Ljava/lang/String;)V", (void *)CainMediaPlayer_setDataSource},
         {
             "_setDataSource",
             "(Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;)V",
             (void *)CainMediaPlayer_setDataSourceAndHeaders
         },
-        {"setDataSource", "(Ljava/io/FileDescriptor;JJ)V", (void *)CainMediaPlayer_setDataSourceFD},
+        {"_setDataSource", "(Ljava/io/FileDescriptor;JJ)V", (void *)CainMediaPlayer_setDataSourceFD},
         {"_setVideoSurface", "(Landroid/view/Surface;)V", (void *) CainMediaPlayer_setVideoSurface},
-        {"prepare", "()V", (void *) CainMediaPlayer_prepare},
-        {"prepareAsync", "()V", (void *) CainMediaPlayer_prepareAsync},
+        {"_prepare", "()V", (void *) CainMediaPlayer_prepare},
+        {"_prepareAsync", "()V", (void *) CainMediaPlayer_prepareAsync},
         {"_start", "()V", (void *) CainMediaPlayer_start},
         {"_stop", "()V", (void *) CainMediaPlayer_stop},
         {"_resume", "()V", (void *) CainMediaPlayer_resume},
-        {"getVideoWidth", "()I", (void *) CainMediaPlayer_getVideoWidth},
-        {"getVideoHeight", "()I", (void *) CainMediaPlayer_getVideoHeight},
-        {"seekTo", "(F)V", (void *) CainMediaPlayer_seekTo},
+        {"_getVideoWidth", "()I", (void *) CainMediaPlayer_getVideoWidth},
+        {"_getVideoHeight", "()I", (void *) CainMediaPlayer_getVideoHeight},
+        {"_seekTo", "(F)V", (void *) CainMediaPlayer_seekTo},
         {"_pause", "()V", (void *) CainMediaPlayer_pause},
-        {"isPlaying", "()Z", (void *) CainMediaPlayer_isPlaying},
-        {"getCurrentPosition", "()J", (void *) CainMediaPlayer_getCurrentPosition},
-        {"getDuration", "()J", (void *) CainMediaPlayer_getDuration},
+        {"_isPlaying", "()Z", (void *) CainMediaPlayer_isPlaying},
+        {"_getCurrentPosition", "()J", (void *) CainMediaPlayer_getCurrentPosition},
+        {"_getDuration", "()J", (void *) CainMediaPlayer_getDuration},
         {"_release", "()V", (void *) CainMediaPlayer_release},
         {"_reset", "()V", (void *) CainMediaPlayer_reset},
-        {"setLooping", "(Z)V", (void *) CainMediaPlayer_setLooping},
-        {"isLooping", "()Z", (void *) CainMediaPlayer_isLooping},
-        {"setVolume", "(FF)V", (void *) CainMediaPlayer_setVolume},
-        {"setMute", "(Z)V", (void *) CainMediaPlayer_setMute},
-        {"setRate", "(F)V", (void *) CainMediaPlayer_setRate},
-        {"setPitch", "(F)V", (void *) CainMediaPlayer_setPitch},
-        {"getFrameAt", "(F)Landroid/graphics/Bitmap;", (void *) CainMediaPlayer_getFrameAt},
+        {"_setLooping", "(Z)V", (void *) CainMediaPlayer_setLooping},
+        {"_isLooping", "()Z", (void *) CainMediaPlayer_isLooping},
+        {"_setVolume", "(FF)V", (void *) CainMediaPlayer_setVolume},
+        {"_setMute", "(Z)V", (void *) CainMediaPlayer_setMute},
+        {"_setRate", "(F)V", (void *) CainMediaPlayer_setRate},
+        {"_setPitch", "(F)V", (void *) CainMediaPlayer_setPitch},
         {"native_init", "()V", (void *)CainMediaPlayer_init},
         {"native_setup", "(Ljava/lang/Object;)V", (void *) CainMediaPlayer_setup},
         {"native_finalize", "()V", (void *) CainMediaPlayer_finalize},

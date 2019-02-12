@@ -29,7 +29,7 @@ import java.util.Map;
  * 播放器的实现仿照MediaPlayer 的实现逻辑
  * 详情请参考 android.media.MediaPlayer.java 和 android_media_MediaPlayer.cpp
  */
-public class CainMediaPlayer {
+public class CainMediaPlayer implements IMediaPlayer {
 
     /**
      Constant to retrieve only the new metadata since the last
@@ -156,6 +156,7 @@ public class CainMediaPlayer {
      * @param surface The {@link Surface} to be used for the video portion of
      * the media.
      */
+    @Override
     public void setSurface(Surface surface) {
         if (mScreenOnWhilePlaying && surface != null) {
             Log.w(TAG, "setScreenOnWhilePlaying(true) is ineffective for Surface");
@@ -260,6 +261,7 @@ public class CainMediaPlayer {
      * @param uri the Content URI of the data you want to play
      * @throws IllegalStateException if it is called in an invalid state
      */
+    @Override
     public void setDataSource(@NonNull Context context, @NonNull Uri uri)
             throws IOException, IllegalArgumentException, SecurityException, IllegalStateException {
         setDataSource(context, uri, null);
@@ -273,6 +275,7 @@ public class CainMediaPlayer {
      * @param headers the headers to be sent together with the request for the data
      * @throws IllegalStateException if it is called in an invalid state
      */
+    @Override
     public void setDataSource(@NonNull Context context, @NonNull Uri uri, Map<String, String> headers)
             throws IOException, IllegalArgumentException, SecurityException, IllegalStateException {
 
@@ -316,7 +319,12 @@ public class CainMediaPlayer {
      * @param path the path of the file, or the http/rtsp URL of the stream you want to play
      * @throws IllegalStateException if it is called in an invalid state
      */
-    public native void setDataSource(@NonNull String path)
+    public void setDataSource(@NonNull String path)
+            throws IOException, IllegalArgumentException, SecurityException, IllegalStateException {
+        _setDataSource(path);
+    }
+
+    private native void _setDataSource(@NonNull String path)
             throws IOException, IllegalArgumentException, SecurityException, IllegalStateException;
 
     /**
@@ -327,6 +335,7 @@ public class CainMediaPlayer {
      * @throws IllegalStateException if it is called in an invalid state
      * @hide pending API council
      */
+    @Override
     public void setDataSource(@NonNull String path, Map<String, String> headers)
             throws IOException, IllegalArgumentException, SecurityException, IllegalStateException {
         String[] keys = null;
@@ -357,6 +366,7 @@ public class CainMediaPlayer {
      * @param fd the FileDescriptor for the file you want to play
      * @throws IllegalStateException if it is called in an invalid state
      */
+    @Override
     public void setDataSource(FileDescriptor fd)
             throws IOException, IllegalArgumentException, IllegalStateException {
         // intentionally less than LONG_MAX
@@ -373,7 +383,12 @@ public class CainMediaPlayer {
      * @param length the length in bytes of the data to be played
      * @throws IllegalStateException if it is called in an invalid state
      */
-    public native void setDataSource(FileDescriptor fd, long offset, long length)
+    public void setDataSource(FileDescriptor fd, long offset, long length)
+            throws IOException, IllegalArgumentException, IllegalStateException {
+        _setDataSource(fd, offset, length);
+    }
+
+    private native void _setDataSource(FileDescriptor fd, long offset, long length)
             throws IOException, IllegalArgumentException, IllegalStateException;
 
     /**
@@ -385,7 +400,12 @@ public class CainMediaPlayer {
      *
      * @throws IllegalStateException if it is called in an invalid state
      */
-    public native void prepare() throws IOException, IllegalStateException;
+    @Override
+    public void prepare() throws IOException, IllegalStateException {
+        _prepare();
+    }
+
+    private native void _prepare() throws IOException, IllegalStateException;
 
     /**
      * Prepares the player for playback, asynchronously.
@@ -397,7 +417,12 @@ public class CainMediaPlayer {
      *
      * @throws IllegalStateException if it is called in an invalid state
      */
-    public native void prepareAsync() throws IllegalStateException;
+    @Override
+    public void prepareAsync() throws IllegalStateException {
+        _prepareAsync();
+    }
+
+    public native void _prepareAsync() throws IllegalStateException;
 
     /**
      * Starts or resumes playback. If playback had previously been paused,
@@ -407,7 +432,8 @@ public class CainMediaPlayer {
      *
      * @throws IllegalStateException if it is called in an invalid state
      */
-    public  void start() throws IllegalStateException {
+    @Override
+    public void start() throws IllegalStateException {
         stayAwake(true);
         _start();
     }
@@ -420,6 +446,7 @@ public class CainMediaPlayer {
      * @throws IllegalStateException if the internal player engine has not been
      * initialized.
      */
+    @Override
     public void stop() throws IllegalStateException {
         stayAwake(false);
         _stop();
@@ -428,11 +455,12 @@ public class CainMediaPlayer {
     private native void _stop() throws IllegalStateException;
 
     /**
-     * Pauses playback. Call start() to resume.
+     * Pauses playback. Call pause() to pause.
      *
      * @throws IllegalStateException if the internal player engine has not been
      * initialized.
      */
+    @Override
     public void pause() throws IllegalStateException {
         stayAwake(false);
         _pause();
@@ -440,6 +468,13 @@ public class CainMediaPlayer {
 
     private native void _pause() throws IllegalStateException;
 
+    /**
+     * Pauses playback. Call resume() to resume.
+     *
+     * @throws IllegalStateException if the internal player engine has not been
+     * initialized.
+     */
+    @Override
     public void resume() throws IllegalStateException {
         stayAwake(true);
         _resume();
@@ -464,6 +499,7 @@ public class CainMediaPlayer {
      * @param mode    the power/wake mode to set
      * @see android.os.PowerManager
      */
+    @Override
     public void setWakeMode(Context context, int mode) {
         boolean washeld = false;
         if (mWakeLock != null) {
@@ -492,6 +528,7 @@ public class CainMediaPlayer {
      * @param screenOn Supply true to keep the screen on, false to allow it
      * to turn off.
      */
+    @Override
     public void setScreenOnWhilePlaying(boolean screenOn) {
         if (mScreenOnWhilePlaying != screenOn) {
             if (screenOn && mSurfaceHolder == null) {
@@ -529,7 +566,12 @@ public class CainMediaPlayer {
      * {@link #setOnVideoSizeChangedListener(OnVideoSizeChangedListener)}
      * to provide a notification when the width is available.
      */
-    public native int getVideoWidth();
+    @Override
+    public int getVideoWidth() {
+        return _getVideoWidth();
+    }
+
+    private native int _getVideoWidth();
 
     /**
      * Returns the height of the video.
@@ -540,14 +582,24 @@ public class CainMediaPlayer {
      * {@link #setOnVideoSizeChangedListener(OnVideoSizeChangedListener)}
      * to provide a notification when the height is available.
      */
-    public native int getVideoHeight();
+    @Override
+    public int getVideoHeight() {
+        return _getVideoHeight();
+    }
+
+    private native int _getVideoHeight();
 
     /**
      * Checks whether the MediaPlayer is playing.
      *
      * @return true if currently playing, false otherwise
      */
-    public native boolean isPlaying();
+    @Override
+    public boolean isPlaying() {
+        return _isPlaying();
+    }
+
+    private native boolean _isPlaying();
 
     /**
      * Seeks to specified time position.
@@ -556,28 +608,61 @@ public class CainMediaPlayer {
      * @throws IllegalStateException if the internal player engine has not been
      * initialized
      */
-    public native void seekTo(float msec) throws IllegalStateException;
+    @Override
+    public void seekTo(float msec) throws IllegalStateException {
+        _seekTo(msec);
+    }
+
+    private native void _seekTo(float msec) throws IllegalStateException;
 
     /**
      * Gets the current playback position.
      *
      * @return the current position in milliseconds
      */
-    public native long getCurrentPosition();
+    @Override
+    public long getCurrentPosition() {
+        return _getCurrentPosition();
+    }
+
+    private native long _getCurrentPosition();
 
     /**
      * Gets the duration of the file.
      *
      * @return the duration in milliseconds
      */
-    public native long getDuration();
+    @Override
+    public long getDuration() {
+        return _getDuration();
+    }
+
+    private native long _getDuration();
 
 
     // TODO public Metadata getMetadata(final boolean update_only, final boolean apply_filter)
 
     // TODO public int setMetadataFilter(Set<Integer> allow, Set<Integer> block)
 
-
+    /**
+     * Releases resources associated with this MediaPlayer object.
+     * It is considered good practice to call this method when you're
+     * done using the MediaPlayer. In particular, whenever an Activity
+     * of an application is paused (its onPause() method is called),
+     * or stopped (its onStop() method is called), this method should be
+     * invoked to release the MediaPlayer object, unless the application
+     * has a special need to keep the object around. In addition to
+     * unnecessary resources (such as memory and instances of codecs)
+     * being held, failure to call this method immediately if a
+     * MediaPlayer object is no longer needed may also lead to
+     * continuous battery consumption for mobile devices, and playback
+     * failure for other applications if no multiple instances of the
+     * same codec are supported on a device. Even if multiple instances
+     * of the same codec are supported, some performance degradation
+     * may be expected when unnecessary multiple instances are used
+     * at the same time.
+     */
+    @Override
     public void release() {
         stayAwake(false);
         updateSurfaceScreenOn();
@@ -599,6 +684,7 @@ public class CainMediaPlayer {
      * this method, you will have to initialize it again by setting the
      * data source and calling prepare().
      */
+    @Override
     public void reset() {
         stayAwake(false);
         _reset();
@@ -617,21 +703,34 @@ public class CainMediaPlayer {
      * @param streamtype the audio stream type
      * @see android.media.AudioManager
      */
-    public native void setAudioStreamType(int streamtype);
+    @Override
+    public void setAudioStreamType(int streamtype) {
+        // do nothing
+    }
 
     /**
      * Sets the player to be looping or non-looping.
      *
      * @param looping whether to loop or not
      */
-    public native void setLooping(boolean looping);
+    @Override
+    public void setLooping(boolean looping) {
+        _setLooping(looping);
+    }
+
+    private native void _setLooping(boolean looping);
 
     /**
      * Checks whether the MediaPlayer is looping or non-looping.
      *
      * @return true if the MediaPlayer is currently looping, false otherwise
      */
-    public native boolean isLooping();
+    @Override
+    public boolean isLooping() {
+        return _isLooping();
+    }
+
+    private native boolean _isLooping();
 
     /**
      * Sets the volume on this player.
@@ -645,40 +744,80 @@ public class CainMediaPlayer {
      * @param leftVolume left volume scalar
      * @param rightVolume right volume scalar
      */
-    public native void setVolume(float leftVolume, float rightVolume);
+    @Override
+    public void setVolume(float leftVolume, float rightVolume) {
+        _setVolume(leftVolume, rightVolume);
+    }
+
+    private native void _setVolume(float leftVolume, float rightVolume);
 
     /**
-     * Currently not implemented, returns null.
-     * @deprecated
-     * @hide
+     * Sets the audio session ID.
+     *
+     * @param sessionId the audio session ID.
+     * The audio session ID is a system wide unique identifier for the audio stream played by
+     * this MediaPlayer instance.
+     * The primary use of the audio session ID  is to associate audio effects to a particular
+     * instance of MediaPlayer: if an audio session ID is provided when creating an audio effect,
+     * this effect will be applied only to the audio content of media players within the same
+     * audio session and not to the output mix.
+     * When created, a MediaPlayer instance automatically generates its own audio session ID.
+     * However, it is possible to force this player to be part of an already existing audio session
+     * by calling this method.
+     * This method must be called before one of the overloaded <code> setDataSource </code> methods.
+     * @throws IllegalStateException if it is called in an invalid state
      */
-    public native Bitmap getFrameAt(float msec) throws IllegalStateException;
+    @Override
+    public void setAudioSessionId(int sessionId)  throws IllegalArgumentException, IllegalStateException {
+        // do nothing
+        mSessionId = sessionId;
+    }
 
+    private int mSessionId;
     /**
      * Returns the audio session ID.
      *
      * @return the audio session ID. {@see #setAudioSessionId(int)}
      * Note that the audio session ID is 0 only if a problem occured when the MediaPlayer was contructed.
      */
-    public native int getAudioSessionId();
+    @Override
+    public int getAudioSessionId() {
+        // do nothing
+        return mSessionId;
+    }
 
     /**
-     * 设置是否静音
+     * Sets mute state on this player.
      * @param mute
      */
-    public native void setMute(boolean mute);
+    @Override
+    public void setMute(boolean mute) {
+        _setMute(mute);
+    }
+
+    private native void _setMute(boolean mute);
 
     /**
-     * 设置速度
+     * Sets speed on this player.
      * @param rate
      */
-    public native void setRate(float rate);
+    @Override
+    public void setRate(float rate) {
+        _setRate(rate);
+    }
+    private native void _setRate(float rate);
 
     /**
-     * 设置pitch
+     * Sets pitch on this player.
      * @param pitch
      */
-    public native void setPitch(float pitch);
+    @Override
+    public void setPitch(float pitch) {
+        _setPitch(pitch);
+    }
+
+    private native void _setPitch(float pitch);
+
 
     private static native void native_init();
     private native void native_setup(Object mediaplayer_this);
@@ -828,42 +967,18 @@ public class CainMediaPlayer {
     }
 
     /**
-     * Interface definition for a callback to be invoked when the media
-     * source is ready for playback.
-     */
-    public interface OnPreparedListener {
-        /**
-         * Called when the media file is ready for playback.
-         *
-         * @param mp the MediaPlayer that is ready for playback
-         */
-        void onPrepared(CainMediaPlayer mp);
-    }
-
-    /**
      * Register a callback to be invoked when the media source is ready
      * for playback.
      *
      * @param listener the callback that will be run
      */
+    @Override
     public void setOnPreparedListener(OnPreparedListener listener) {
         mOnPreparedListener = listener;
     }
 
     private OnPreparedListener mOnPreparedListener;
 
-    /**
-     * Interface definition for a callback to be invoked when playback of
-     * a media source has completed.
-     */
-    public interface OnCompletionListener {
-        /**
-         * Called when the end of a media source is reached during playback.
-         *
-         * @param mp the MediaPlayer that reached the end of the file
-         */
-        void onCompletion(CainMediaPlayer mp);
-    }
 
     /**
      * Register a callback to be invoked when the end of a media source
@@ -871,6 +986,7 @@ public class CainMediaPlayer {
      *
      * @param listener the callback that will be run
      */
+    @Override
     public void setOnCompletionListener(OnCompletionListener listener) {
         mOnCompletionListener = listener;
     }
@@ -878,31 +994,12 @@ public class CainMediaPlayer {
     private OnCompletionListener mOnCompletionListener;
 
     /**
-     * Interface definition of a callback to be invoked indicating buffering
-     * status of a media resource being streamed over the network.
-     */
-    public interface OnBufferingUpdateListener {
-        /**
-         * Called to update status in buffering a media stream received through
-         * progressive HTTP download. The received buffering percentage
-         * indicates how much of the content has been buffered or played.
-         * For example a buffering update of 80 percent when half the content
-         * has already been played indicates that the next 30 percent of the
-         * content to play has been buffered.
-         *
-         * @param mp      the MediaPlayer the update pertains to
-         * @param percent the percentage (0-100) of the content
-         *                that has been buffered or played thus far
-         */
-        void onBufferingUpdate(CainMediaPlayer mp, int percent);
-    }
-
-    /**
      * Register a callback to be invoked when the status of a network
      * stream's buffer has changed.
      *
      * @param listener the callback that will be run.
      */
+    @Override
     public void setOnBufferingUpdateListener(OnBufferingUpdateListener listener) {
         mOnBufferingUpdateListener = listener;
     }
@@ -910,24 +1007,12 @@ public class CainMediaPlayer {
     private OnBufferingUpdateListener mOnBufferingUpdateListener;
 
     /**
-     * Interface definition of a callback to be invoked indicating
-     * the completion of a seek operation.
-     */
-    public interface OnSeekCompleteListener {
-        /**
-         * Called to indicate the completion of a seek operation.
-         *
-         * @param mp the MediaPlayer that issued the seek operation
-         */
-        void onSeekComplete(CainMediaPlayer mp);
-    }
-
-    /**
      * Register a callback to be invoked when a seek operation has been
      * completed.
      *
      * @param listener the callback that will be run
      */
+    @Override
     public void setOnSeekCompleteListener(OnSeekCompleteListener listener) {
         mOnSeekCompleteListener = listener;
     }
@@ -935,50 +1020,17 @@ public class CainMediaPlayer {
     private OnSeekCompleteListener mOnSeekCompleteListener;
 
     /**
-     * Interface definition of a callback to be invoked when the
-     * video size is first known or updated
-     */
-    public interface OnVideoSizeChangedListener {
-        /**
-         * Called to indicate the video size
-         *
-         * The video size (width and height) could be 0 if there was no video,
-         * no display surface was set, or the value was not determined yet.
-         *
-         * @param width     the width of the video
-         * @param height    the height of the video
-         */
-        void onVideoSizeChanged(CainMediaPlayer mediaPlayer, int width, int height);
-    }
-
-    /**
      * Register a callback to be invoked when the video size is
      * known or updated.
      *
      * @param listener the callback that will be run
      */
+    @Override
     public void setOnVideoSizeChangedListener(OnVideoSizeChangedListener listener) {
         mOnVideoSizeChangedListener = listener;
     }
 
     private OnVideoSizeChangedListener mOnVideoSizeChangedListener;
-
-    /**
-     * Interface definition of a callback to be invoked when a
-     * timed text is available for display.
-     * {@hide}
-     */
-    public interface OnTimedTextListener {
-        /**
-         * Called to indicate an avaliable timed text
-         *
-         * @param mp             the MediaPlayer associated with this callback
-         * @param text           the timed text sample which contains the text
-         *                       needed to be displayed and the display format.
-         * {@hide}
-         */
-        void onTimedText(CainMediaPlayer mp, CainTimedText text);
-    }
 
     /**
      * Register a callback to be invoked when a timed text is available
@@ -987,6 +1039,7 @@ public class CainMediaPlayer {
      * @param listener the callback that will be run
      * {@hide}
      */
+    @Override
     public void setOnTimedTextListener(OnTimedTextListener listener) {
         mOnTimedTextListener = listener;
     }
@@ -994,130 +1047,18 @@ public class CainMediaPlayer {
     private OnTimedTextListener mOnTimedTextListener;
 
 
-    /* Do not change these values without updating their counterparts
-     * in include/media/mediaplayer.h!
-     */
-    /** Unspecified media player error.
-     * @see com.cgfay.media.CainMediaPlayer.OnInfoListener
-     */
-    public static final int MEDIA_ERROR_UNKNOWN = 1;
-
-    /** Media server died. In this case, the application must release the
-     * MediaPlayer object and instantiate a new one.
-     * @see com.cgfay.media.CainMediaPlayer.OnInfoListener
-     */
-    public static final int MEDIA_ERROR_SERVER_DIED = 100;
-
-    /** The video is streamed and its container is not valid for progressive
-     * playback i.e the video's index (e.g moov atom) is not at the start of the
-     * file.
-     * @see com.cgfay.media.CainMediaPlayer.OnInfoListener
-     */
-    public static final int MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK = 200;
-    
     /**
-     * Interface definition of a callback to be invoked when there
-     * has been an error during an asynchronous operation (other errors
-     * will throw exceptions at method call time).
+     * Register a callback to be invoked when an error has happened
+     * during an asynchronous operation.
+     *
+     * @param listener the callback that will be run
      */
-    public interface OnErrorListener {
-        /**
-         * Called to indicate an error.
-         *
-         * @param mp      the MediaPlayer the error pertains to
-         * @param what    the type of error that has occurred:
-         * <ul>
-         * <li>{@link #MEDIA_ERROR_UNKNOWN}
-         * <li>{@link #MEDIA_ERROR_SERVER_DIED}
-         * </ul>
-         * @param extra an extra code, specific to the error. Typically
-         * implementation dependant.
-         * @return True if the method handled the error, false if it didn't.
-         * Returning false, or not having an OnErrorListener at all, will
-         * cause the OnCompletionListener to be called.
-         */
-        boolean onError(CainMediaPlayer mp, int what, int extra);
-    }
-
-    /**
-     * 设置出错回调
-     * @param listener
-     */
+    @Override
     public void setOnErrorListener(OnErrorListener listener) {
         mOnErrorListener = listener;
     }
 
     private OnErrorListener mOnErrorListener;
-
-    /* Do not change these values without updating their counterparts
-     * in include/media/mediaplayer.h!
-     */
-    /** Unspecified media player info.
-     * @see com.cgfay.media.CainMediaPlayer.OnInfoListener
-     */
-    public static final int MEDIA_INFO_UNKNOWN = 1;
-
-    /** The video is too complex for the decoder: it can't decode frames fast
-     *  enough. Possibly only the audio plays fine at this stage.
-     * @see com.cgfay.media.CainMediaPlayer.OnInfoListener
-     */
-    public static final int MEDIA_INFO_VIDEO_TRACK_LAGGING = 700;
-
-    /** MediaPlayer is temporarily pausing playback internally in order to
-     * buffer more data.
-     * @see com.cgfay.media.CainMediaPlayer.OnInfoListener
-     */
-    public static final int MEDIA_INFO_BUFFERING_START = 701;
-
-    /** MediaPlayer is resuming playback after filling buffers.
-     * @see com.cgfay.media.CainMediaPlayer.OnInfoListener
-     */
-    public static final int MEDIA_INFO_BUFFERING_END = 702;
-
-    /** Bad interleaving means that a media has been improperly interleaved or
-     * not interleaved at all, e.g has all the video samples first then all the
-     * audio ones. Video is playing but a lot of disk seeks may be happening.
-     * @see com.cgfay.media.CainMediaPlayer.OnInfoListener
-     */
-    public static final int MEDIA_INFO_BAD_INTERLEAVING = 800;
-
-    /** The media cannot be seeked (e.g live stream)
-     * @see com.cgfay.media.CainMediaPlayer.OnInfoListener
-     */
-    public static final int MEDIA_INFO_NOT_SEEKABLE = 801;
-
-    /** A new set of metadata is available.
-     * @see com.cgfay.media.CainMediaPlayer.OnInfoListener
-     */
-    public static final int MEDIA_INFO_METADATA_UPDATE = 802;
-
-    /**
-     * Interface definition of a callback to be invoked to communicate some
-     * info and/or warning about the media or its playback.
-     */
-    public interface OnInfoListener {
-        /**
-         * Called to indicate an info or a warning.
-         *
-         * @param mp      the MediaPlayer the info pertains to.
-         * @param what    the type of info or warning.
-         * <ul>
-         * <li>{@link #MEDIA_INFO_UNKNOWN}
-         * <li>{@link #MEDIA_INFO_VIDEO_TRACK_LAGGING}
-         * <li>{@link #MEDIA_INFO_BUFFERING_START}
-         * <li>{@link #MEDIA_INFO_BUFFERING_END}
-         * <li>{@link #MEDIA_INFO_BAD_INTERLEAVING}
-         * <li>{@link #MEDIA_INFO_NOT_SEEKABLE}
-         * <li>{@link #MEDIA_INFO_METADATA_UPDATE}
-         * </ul>
-         * @param extra an extra code, specific to the info. Typically
-         * implementation dependant.
-         * @return True if the method handled the info, false if it didn't.
-         * Returning false, or not having an OnErrorListener at all, will
-         * cause the info to be discarded.
-         */
-        boolean onInfo(CainMediaPlayer mp, int what, int extra);
-    }
 
     /**
      * Register a callback to be invoked when an info/warning is available.

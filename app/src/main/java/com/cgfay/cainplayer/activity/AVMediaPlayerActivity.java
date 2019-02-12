@@ -24,6 +24,7 @@ import com.cgfay.media.CainMediaPlayer;
 import com.cgfay.cainplayer.R;
 import com.cgfay.cainplayer.widget.AspectRatioLayout;
 import com.cgfay.media.CainMetadata;
+import com.cgfay.media.IMediaPlayer;
 import com.cgfay.utilslibrary.utils.StringUtils;
 
 import java.lang.ref.WeakReference;
@@ -110,9 +111,9 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
         } catch (Exception e) {
 
         }
-        mCainMediaPlayer.setOnPreparedListener(new CainMediaPlayer.OnPreparedListener() {
+        mCainMediaPlayer.setOnPreparedListener(new IMediaPlayer.OnPreparedListener() {
             @Override
-            public void onPrepared(CainMediaPlayer mp) {
+            public void onPrepared(IMediaPlayer mp) {
                 Log.d(TAG, "onPrepared: ");
                 mCainMediaPlayer.start();
                 runOnUiThread(new Runnable() {
@@ -129,16 +130,16 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
                 mEventHandler.sendEmptyMessage(MSG_UPDATE_POSITON);
             }
         });
-        mCainMediaPlayer.setOnErrorListener(new CainMediaPlayer.OnErrorListener() {
+        mCainMediaPlayer.setOnErrorListener(new IMediaPlayer.OnErrorListener() {
             @Override
-            public boolean onError(CainMediaPlayer mp, int what, int extra) {
+            public boolean onError(IMediaPlayer mp, int what, int extra) {
                 Log.d(TAG, "onError: what = " + what + ", msg = " + extra);
                 return false;
             }
         });
-        mCainMediaPlayer.setOnCompletionListener(new CainMediaPlayer.OnCompletionListener() {
+        mCainMediaPlayer.setOnCompletionListener(new IMediaPlayer.OnCompletionListener() {
             @Override
-            public void onCompletion(CainMediaPlayer mp) {
+            public void onCompletion(IMediaPlayer mp) {
 
             }
         });
