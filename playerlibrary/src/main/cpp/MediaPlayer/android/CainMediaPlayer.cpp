@@ -14,6 +14,8 @@ CainMediaPlayer::CainMediaPlayer() {
     mPrepareSync = false;
     mPrepareStatus = NO_ERROR;
     mAudioSessionId = 0;
+    mSeeking = false;
+    mSeekingPosition = 0;
 }
 
 CainMediaPlayer::~CainMediaPlayer() {
@@ -181,16 +183,26 @@ int CainMediaPlayer::getVideoHeight() {
 
 status_t CainMediaPlayer::seekTo(float msec) {
     if (mediaPlayer != nullptr) {
-        mediaPlayer->seekTo(msec);
+        // if in seeking state, put seek message in queue, to process after preview seeking.
+        if (mSeeking) {
+            mediaPlayer->getMessageQueue()->postMessage(MSG_REQUEST_SEEK, msec);
+        } else {
+            mediaPlayer->seekTo(msec);
+            mSeekingPosition = (long)msec;
+            mSeeking = true;
+        }
     }
     return NO_ERROR;
 }
 
 long CainMediaPlayer::getCurrentPosition() {
     if (mediaPlayer != nullptr) {
+        if (mSeeking) {
+            return mSeekingPosition;
+        }
         return mediaPlayer->getCurrentPosition();
     }
-    return -1;
+    return 0;
 }
 
 long CainMediaPlayer::getDuration() {
@@ -413,6 +425,7 @@ void CainMediaPlayer::run() {
 
             case MSG_SEEK_COMPLETE: {
                 ALOGD("CainMediaPlayer seeks completed!\n");
+                mSeeking = false;
                 postEvent(MEDIA_SEEK_COMPLETE, 0, 0);
                 break;
             }
@@ -450,7 +463,12 @@ void CainMediaPlayer::run() {
 
             case MSG_REQUEST_SEEK: {
                 ALOGD("CainMediaPlayer is seeking...");
-                seekTo((float)msg.arg1);
+                mSeeking = true;
+                mSeekingPosition = (long)msg.arg1;
+                if (mediaPlayer != nullptr) {
+                    mediaPlayer->seekTo(mSeekingPosition);
+                }
+//                seekTo((float)msg.arg1);
                 break;
             }
 

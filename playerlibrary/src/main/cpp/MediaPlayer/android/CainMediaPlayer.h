@@ -161,6 +161,8 @@ private:
     MediaPlayer *mediaPlayer;
     MediaPlayerListener *mListener;
 
+    bool mSeeking;
+    long mSeekingPosition;
     bool mPrepareSync;
     status_t mPrepareStatus;
     int mAudioSessionId;
