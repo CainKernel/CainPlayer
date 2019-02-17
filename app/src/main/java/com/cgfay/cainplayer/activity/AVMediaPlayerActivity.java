@@ -120,7 +120,7 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
                     @Override
                     public void run() {
                         mLayoutAspectRatio.setAspectRatio(
-                                mCainMediaPlayer.getVideoWidth() / (mCainMediaPlayer.getVideoHeight() * 1.0f));
+                                mCainMediaPlayer.getVideoWidth() * 1.0f / (mCainMediaPlayer.getVideoHeight() * 1.0f));
                         mTvCurrentPosition.setText(StringUtils.generateStandardTime(Math.max(mCainMediaPlayer.getCurrentPosition(), 0)));
                         mTvDuration.setText(StringUtils.generateStandardTime(Math.max(mCainMediaPlayer.getDuration(), 0)));
                         mSeekBar.setMax((int) Math.max(mCainMediaPlayer.getDuration(), 0));
