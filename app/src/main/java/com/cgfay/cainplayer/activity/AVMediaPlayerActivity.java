@@ -144,6 +144,7 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
             }
         });
         try {
+            mCainMediaPlayer.setOption(CainMediaPlayer.OPT_CATEGORY_PLAYER, "vcodec", "h264_mediacodec");
             mCainMediaPlayer.prepareAsync();
         } catch (Exception e) {
             e.printStackTrace();

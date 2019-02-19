@@ -1,6 +1,13 @@
 # CainPlayer
 基于ffplay逻辑实现的简单播放器。
 
+# 支持部分ffplay命令
+通过使用 setOption 方法指定参数：
+```
+指定使用MediaCodec进行解码
+mCainMediaPlayer.setOption(CainMediaPlayer.OPT_CATEGORY_PLAYER, "vcodec", "h264_mediacodec");
+```
+
 # 截图
 ![本地视频](https://github.com/CainKernel/CainPlayer/blob/master/screenshot/native_video.png)
 
