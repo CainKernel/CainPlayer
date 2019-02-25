@@ -2,7 +2,6 @@ package com.cgfay.media;
 
 import android.annotation.TargetApi;
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.SurfaceTexture;
 import android.media.AudioManager;
 import android.net.Uri;
@@ -206,6 +205,13 @@ public interface IMediaPlayer {
      * to turn off.
      */
     public void setScreenOnWhilePlaying(boolean screenOn);
+
+    /**
+     * Returns the rotate of the video.
+     *
+     * @return the rotate of the video, or o if there is no video
+     */
+    public int getRotate();
 
     /**
      * Returns the width of the video.

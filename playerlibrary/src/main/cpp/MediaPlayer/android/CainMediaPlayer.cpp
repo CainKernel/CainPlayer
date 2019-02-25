@@ -167,6 +167,13 @@ bool CainMediaPlayer::isPlaying() {
     return false;
 }
 
+int CainMediaPlayer::getRotate() {
+    if (mediaPlayer != nullptr) {
+        return mediaPlayer->getRotate();
+    }
+    return 0;
+}
+
 int CainMediaPlayer::getVideoWidth() {
     if (mediaPlayer != nullptr) {
         return mediaPlayer->getVideoWidth();
@@ -289,7 +296,6 @@ void CainMediaPlayer::setOption(int category, const char *type, int64_t option) 
         mediaPlayer->getPlayerState()->setOptionLong(category, type, option);
     }
 }
-
 
 void CainMediaPlayer::notify(int msg, int ext1, int ext2, void *obj, int len) {
     if (mediaPlayer != nullptr) {

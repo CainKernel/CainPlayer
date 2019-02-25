@@ -3,7 +3,6 @@ package com.cgfay.media;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
-import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.media.AudioManager;
@@ -511,7 +510,7 @@ public class CainMediaPlayer implements IMediaPlayer {
         }
 
         PowerManager pm = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
-        mWakeLock = pm.newWakeLock(mode|PowerManager.ON_AFTER_RELEASE, CainMediaPlayer.class.getName());
+        mWakeLock = pm.newWakeLock(mode| PowerManager.ON_AFTER_RELEASE, CainMediaPlayer.class.getName());
         mWakeLock.setReferenceCounted(false);
         if (washeld) {
             mWakeLock.acquire();
@@ -556,6 +555,17 @@ public class CainMediaPlayer implements IMediaPlayer {
             mSurfaceHolder.setKeepScreenOn(mScreenOnWhilePlaying && mStayAwake);
         }
     }
+
+    /**
+     * Returns the rotate of the video.
+     *
+     * @return the rotate of the video, or o if there is no video
+     */
+    @Override
+    public int getRotate() {
+        return _getRotate();
+    }
+    private native int _getRotate();
 
     /**
      * Returns the width of the video.

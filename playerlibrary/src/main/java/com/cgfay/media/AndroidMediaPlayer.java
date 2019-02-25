@@ -1,7 +1,6 @@
 package com.cgfay.media;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.TimedText;
@@ -194,6 +193,11 @@ public class AndroidMediaPlayer implements IMediaPlayer {
         if (mMediaPlayer != null) {
             mMediaPlayer.setScreenOnWhilePlaying(screenOn);
         }
+    }
+
+    @Override
+    public int getRotate() {
+        return 0;
     }
 
     @Override
