@@ -236,7 +236,7 @@ status_t CainMediaPlayer::setLooping(bool looping) {
 
 bool CainMediaPlayer::isLooping() {
     if (mediaPlayer != nullptr) {
-        return (mediaPlayer->isPlaying() != 0);
+        return (mediaPlayer->isLooping() != 0);
     }
     return false;
 }
