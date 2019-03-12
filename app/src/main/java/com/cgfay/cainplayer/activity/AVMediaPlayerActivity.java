@@ -54,7 +54,6 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
 
     private CainMediaPlayer mCainMediaPlayer;
 
-    private EventHandler mEventHandler;
 
     private CainMediaMetadataRetriever mMetadataRetriever;
 
@@ -63,7 +62,6 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_media_player);
         mPath = getIntent().getStringExtra(PATH);
-        mEventHandler = new EventHandler(this, Looper.getMainLooper());
         initView();
         initPlayer();
         initMediaMetadataRetriever();
@@ -127,7 +125,6 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
                         mSeekBar.setProgress((int)Math.max(mCainMediaPlayer.getCurrentPosition(), 0));
                     }
                 });
-                mEventHandler.sendEmptyMessage(MSG_UPDATE_POSITON);
             }
         });
         mCainMediaPlayer.setOnErrorListener(new IMediaPlayer.OnErrorListener() {
@@ -141,6 +138,18 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
             @Override
             public void onCompletion(IMediaPlayer mp) {
 
+            }
+        });
+        mCainMediaPlayer.setOnCurrentPositionListener(new CainMediaPlayer.OnCurrentPositionListener() {
+            @Override
+            public void onCurrentPosition(final long current, final long duration) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mTvCurrentPosition.setText(StringUtils.generateStandardTime(current));
+                        mTvDuration.setText(StringUtils.generateStandardTime(duration));
+                    }
+                });
             }
         });
         try {
@@ -213,8 +222,6 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
             mMetadataRetriever.release();
             mMetadataRetriever = null;
         }
-        mEventHandler.removeCallbacksAndMessages(null);
-        mEventHandler = null;
         super.onDestroy();
     }
 
@@ -269,59 +276,6 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
 
     }
 
-    /**
-     * process Event at Main Looper
-     */
-    private class EventHandler extends Handler {
 
-        private WeakReference<AVMediaPlayerActivity> mWeakActivity;
-
-        public EventHandler(AVMediaPlayerActivity activity, Looper looper) {
-            super(looper);
-            mWeakActivity = new WeakReference<>(activity);
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case MSG_UPDATE_POSITON: {
-                    final long currentPosition;
-                    final long duration;
-                    if (mWeakActivity.get() != null && mWeakActivity.get().mCainMediaPlayer != null) {
-                        currentPosition = mWeakActivity.get().mCainMediaPlayer.getCurrentPosition();
-                        duration = mWeakActivity.get().mCainMediaPlayer.getDuration();
-                    } else {
-                        currentPosition = 0;
-                        duration = 0;
-                    }
-
-                    if (getLooper() == Looper.getMainLooper()) {
-                        if (mWeakActivity.get() != null) {
-                            mWeakActivity.get().mTvCurrentPosition.setText(StringUtils.generateStandardTime(currentPosition));
-                            mWeakActivity.get().mSeekBar.setProgress((int) currentPosition);
-                        }
-                    } else {
-                        if (mWeakActivity.get() != null) {
-                            mWeakActivity.get().runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    if (mWeakActivity.get() != null) {
-                                        mWeakActivity.get().mTvCurrentPosition.setText(StringUtils.generateStandardTime(currentPosition));
-                                        mWeakActivity.get().mSeekBar.setProgress((int) currentPosition);
-                                    }
-                                }
-                            });
-                        }
-                    }
-                    sendEmptyMessageDelayed(MSG_UPDATE_POSITON, 300);
-                    break;
-                }
-
-                default: {
-                    break;
-                }
-            }
-        }
-    }
 
 }
