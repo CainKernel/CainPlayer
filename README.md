@@ -1,5 +1,5 @@
 # CainPlayer
-基于ffplay逻辑实现的简单播放器。
+基于ffplay逻辑实现的简单播放器。该播放器最开始是为了CainCamera中的短视频编辑而造的播放器，目前播放器还是个demo，离真正的商用播放器还差得远，各种异常状态都还没考虑进去。对于直播点播来说，个人推荐ijkplayer，都是基于ffplay实现的播放器，ijkplayer着重对网络流进行了优化，目前各大公司的直播点播的播放器基本采用ijkplayer或者基于ijkplayer改造而来，属于一个久经考验的播放器。
 
 # 支持部分ffplay命令
 通过使用 setOption 方法指定参数：
