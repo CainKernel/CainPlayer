@@ -16,7 +16,8 @@ void VideoDevice::terminate() {
 
 }
 
-void VideoDevice::onInitTexture(int width, int height, TextureFormat format, BlendMode blendMode) {
+void VideoDevice::onInitTexture(int width, int height, TextureFormat format, BlendMode blendMode,
+                                int rotate) {
 
 }
 
@@ -29,6 +30,6 @@ int VideoDevice::onUpdateARGB(uint8_t *rgba, int pitch) {
     return 0;
 }
 
-int VideoDevice::onRequestRender(FlipDirection direction) {
+int VideoDevice::onRequestRender(bool flip) {
     return 0;
 }

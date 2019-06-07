@@ -41,11 +41,18 @@ add_library( media_player
              source/queue/FrameQueue.cpp
              source/queue/PacketQueue.cpp
 
+             source/renderer/CainEGLContext.cpp
+             source/renderer/CoordinateUtils.cpp
              source/renderer/EglHelper.cpp
-             source/renderer/GLUtils.cpp
-             source/renderer/RenderShaders.cpp
-             source/renderer/BGRARenderer.cpp
-             source/renderer/YUV420PRenderer.cpp
+             source/renderer/FrameBuffer.cpp
+             source/renderer/GLFilter.cpp
+             source/renderer/GLInputABGRFilter.cpp
+             source/renderer/GLInputFilter.cpp
+             source/renderer/GLInputYUV420PFilter.cpp
+             source/renderer/InputRenderNode.cpp
+             source/renderer/OpenGLUtils.cpp
+             source/renderer/RenderNode.cpp
+             source/renderer/vecmath.cpp
 
              source/sync/MediaClock.cpp
              source/sync/MediaSync.cpp

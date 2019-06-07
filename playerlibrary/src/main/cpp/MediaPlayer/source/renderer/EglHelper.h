@@ -1,14 +1,9 @@
 //
-// Created by cain on 2019/1/8.
+// Created by CainHuang on 2019/3/13.
 //
 
 #ifndef EGLHELPER_H
 #define EGLHELPER_H
-
-#include <android/native_window.h>
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#include <EGL/eglplatform.h>
 
 /**
  * Constructor flag: surface must be recordable.  This discourages EGL from using a
@@ -25,6 +20,11 @@
 
 #if defined(__ANDROID__)
 
+#include <android/native_window.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <EGL/eglplatform.h>
+
 // Android-specific extension
 #define EGL_RECORDABLE_ANDROID 0x3142
 
@@ -37,6 +37,9 @@ public:
     EglHelper();
 
     virtual ~EglHelper();
+
+    // 初始化
+    bool init(int flags);
 
     // 初始化EGLDisplay、EGLContext、EGLConfig等资源
     bool init(EGLContext sharedContext, int flags);

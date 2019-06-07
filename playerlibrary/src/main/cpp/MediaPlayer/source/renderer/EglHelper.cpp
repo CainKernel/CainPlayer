@@ -1,9 +1,10 @@
 //
-// Created by cain on 2019/1/8.
+// Created by CainHuang on 2019/3/13.
 //
 
 #include <AndroidLog.h>
 #include "EglHelper.h"
+#include "CainEGLContext.h"
 
 EglHelper::EglHelper() {
     mEglDisplay = EGL_NO_DISPLAY;
@@ -22,6 +23,10 @@ EglHelper::~EglHelper() {
     release();
 }
 
+bool EglHelper::init(int flags) {
+    return init(CainEGLContext::getInstance()->getContext(), flags);
+}
+
 bool EglHelper::init(EGLContext sharedContext, int flags) {
     if (mEglDisplay != EGL_NO_DISPLAY) {
         ALOGE("EGL already set up");
@@ -29,7 +34,10 @@ bool EglHelper::init(EGLContext sharedContext, int flags) {
     }
 
     if (sharedContext == NULL) {
+        ALOGD("Shared Context is null");
         sharedContext = EGL_NO_CONTEXT;
+    } else {
+        ALOGD("Main EGLContext is created!");
     }
 
     // 获取EGLDisplay

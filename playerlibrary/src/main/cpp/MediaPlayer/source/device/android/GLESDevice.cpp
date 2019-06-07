@@ -2,8 +2,8 @@
 // Created by cain on 2018/12/30.
 //
 
-#include <renderer/YUV420PRenderer.h>
-#include <renderer/BGRARenderer.h>
+#include <AndroidLog.h>
+#include <renderer/CoordinateUtils.h>
 #include "GLESDevice.h"
 
 GLESDevice::GLESDevice() {
@@ -19,7 +19,9 @@ GLESDevice::GLESDevice() {
 
     mVideoTexture = (Texture *) malloc(sizeof(Texture));
     memset(mVideoTexture, 0, sizeof(Texture));
-    mRenderer = NULL;
+    mRenderNode = NULL;
+    resetVertices();
+    resetTexVertices();
 }
 
 GLESDevice::~GLESDevice() {
@@ -55,17 +57,22 @@ void GLESDevice::terminate(bool releaseContext) {
         mHaveEGLSurface = false;
     }
     if (eglHelper->getEglContext() != EGL_NO_CONTEXT && releaseContext) {
+        if (mRenderNode) {
+            mRenderNode->destroy();
+            delete mRenderNode;
+        }
         eglHelper->release();
         mHaveEGlContext = false;
     }
 }
 
-void GLESDevice::onInitTexture(int width, int height, TextureFormat format, BlendMode blendMode) {
+void GLESDevice::onInitTexture(int width, int height, TextureFormat format, BlendMode blendMode,
+                               int rotate) {
     mMutex.lock();
 
     // 创建EGLContext
     if (!mHaveEGlContext) {
-        mHaveEGlContext = eglHelper->init(NULL, FLAG_TRY_GLES3);
+        mHaveEGlContext = eglHelper->init(FLAG_TRY_GLES3);
         ALOGD("mHaveEGlContext = %d", mHaveEGlContext);
     }
 
@@ -104,24 +111,18 @@ void GLESDevice::onInitTexture(int width, int height, TextureFormat format, Blen
             ANativeWindow_setBuffersGeometry(mWindow, mSurfaceWidth, mSurfaceHeight, windowFormat);
         }
     }
+    mVideoTexture->rotate = rotate;
     mVideoTexture->frameWidth = width;
     mVideoTexture->frameHeight = height;
     mVideoTexture->height = height;
     mVideoTexture->format = format;
     mVideoTexture->blendMode = blendMode;
     mVideoTexture->direction = FLIP_NONE;
-    if (mRenderer == NULL) {
-        if (format == FMT_YUV420P) {
-            mRenderer = new YUV420PRenderer();
-        } else if (format == FMT_ARGB) {
-            mRenderer = new BGRARenderer();
-        } else {
-            mRenderer = NULL;
-        }
-        if (mRenderer != NULL) {
-            eglHelper->makeCurrent(eglSurface);
-            mRenderer->onInit(mVideoTexture);
-            eglHelper->swapBuffers(eglSurface);
+    eglHelper->makeCurrent(eglSurface);
+    if (mRenderNode == NULL) {
+        mRenderNode = new InputRenderNode();
+        if (mRenderNode != NULL) {
+            mRenderNode->initFilter(mVideoTexture);
         }
     }
     mMutex.unlock();
@@ -139,9 +140,9 @@ int GLESDevice::onUpdateYUV(uint8_t *yData, int yPitch, uint8_t *uData, int uPit
     mVideoTexture->pixels[0] = yData;
     mVideoTexture->pixels[1] = uData;
     mVideoTexture->pixels[2] = vData;
-    if (mRenderer != NULL && eglSurface != EGL_NO_SURFACE) {
+    if (mRenderNode != NULL && eglSurface != EGL_NO_SURFACE) {
         eglHelper->makeCurrent(eglSurface);
-        mRenderer->uploadTexture(mVideoTexture);
+        mRenderNode->uploadTexture(mVideoTexture);
     }
     // 设置像素实际的宽度，即linesize的值
     mVideoTexture->width = yPitch;
@@ -156,9 +157,9 @@ int GLESDevice::onUpdateARGB(uint8_t *rgba, int pitch) {
     mMutex.lock();
     mVideoTexture->pitches[0] = pitch;
     mVideoTexture->pixels[0] = rgba;
-    if (mRenderer != NULL && eglSurface != EGL_NO_SURFACE) {
+    if (mRenderNode != NULL && eglSurface != EGL_NO_SURFACE) {
         eglHelper->makeCurrent(eglSurface);
-        mRenderer->uploadTexture(mVideoTexture);
+        mRenderNode->uploadTexture(mVideoTexture);
     }
     // 设置像素实际的宽度，即linesize的值
     mVideoTexture->width = pitch / 4;
@@ -166,20 +167,35 @@ int GLESDevice::onUpdateARGB(uint8_t *rgba, int pitch) {
     return 0;
 }
 
-int GLESDevice::onRequestRender(FlipDirection direction) {
+int GLESDevice::onRequestRender(bool flip) {
     if (!mHaveEGlContext) {
         return -1;
     }
     mMutex.lock();
-    mVideoTexture->direction = direction;
-    if (mRenderer != NULL && eglSurface != EGL_NO_SURFACE) {
+    mVideoTexture->direction = flip ? FLIP_VERTICAL : FLIP_NONE;
+    ALOGD("flip ? %d", flip);
+    if (mRenderNode != NULL && eglSurface != EGL_NO_SURFACE) {
         eglHelper->makeCurrent(eglSurface);
         if (mSurfaceWidth != 0 && mSurfaceHeight != 0) {
-            glViewport(0, 0, mSurfaceWidth, mSurfaceHeight);
+            mRenderNode->setDisplaySize(mSurfaceWidth, mSurfaceHeight);
         }
-        mRenderer->renderTexture(mVideoTexture);
+        mRenderNode->drawFrame(mVideoTexture);
         eglHelper->swapBuffers(eglSurface);
     }
     mMutex.unlock();
     return 0;
+}
+
+void GLESDevice::resetVertices() {
+    const float *verticesCoord = CoordinateUtils::getVertexCoordinates();
+    for (int i = 0; i < 8; ++i) {
+        vertices[i] = verticesCoord[i];
+    }
+}
+
+void GLESDevice::resetTexVertices() {
+    const float *vertices = CoordinateUtils::getTextureCoordinates(ROTATE_NONE);
+    for (int i = 0; i < 8; ++i) {
+        textureVertices[i] = vertices[i];
+    }
 }

@@ -7,13 +7,16 @@ import android.os.Looper;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.Layout;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
@@ -49,7 +52,6 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
     private ImageView mImageCover;
     private TextView mTextMetadata;
 
-    private AspectRatioLayout mLayoutAspectRatio;
     private SurfaceView mSurfaceView;
 
     private CainMediaPlayer mCainMediaPlayer;
@@ -68,7 +70,6 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
     }
 
     private void initView() {
-        mLayoutAspectRatio = (AspectRatioLayout) findViewById(R.id.layout_aspect_ratio);
         mLayoutOperation = (LinearLayout) findViewById(R.id.layout_operation);
         mBtnPause = (Button) findViewById(R.id.btn_pause_play);
         mBtnPause.setOnClickListener(this);
@@ -117,8 +118,18 @@ public class AVMediaPlayerActivity extends AppCompatActivity implements View.OnC
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        mLayoutAspectRatio.setAspectRatio(
-                                mCainMediaPlayer.getVideoWidth() * 1.0f / (mCainMediaPlayer.getVideoHeight() * 1.0f));
+                        int viewWidth  = mSurfaceView.getWidth();
+                        int viewHeight;
+                        if (mCainMediaPlayer.getRotate() % 180 != 0) {
+                            viewHeight = viewWidth * mCainMediaPlayer.getVideoWidth() / mCainMediaPlayer.getVideoHeight();
+                        } else {
+                            viewHeight = viewWidth * mCainMediaPlayer.getVideoHeight() / mCainMediaPlayer.getVideoWidth();
+                        }
+                        ViewGroup.LayoutParams layoutParams = mSurfaceView.getLayoutParams();
+                        layoutParams.width = viewWidth;
+                        layoutParams.height = viewHeight;
+                        mSurfaceView.setLayoutParams(layoutParams);
+
                         mTvCurrentPosition.setText(StringUtils.generateStandardTime(Math.max(mCainMediaPlayer.getCurrentPosition(), 0)));
                         mTvDuration.setText(StringUtils.generateStandardTime(Math.max(mCainMediaPlayer.getDuration(), 0)));
                         mSeekBar.setMax((int) Math.max(mCainMediaPlayer.getDuration(), 0));

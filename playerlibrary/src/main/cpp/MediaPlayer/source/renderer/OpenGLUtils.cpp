@@ -1,10 +1,12 @@
 //
-// Created by cain on 2019/1/9.
+// Created by CainHuang on 2019/3/13.
 //
 
-#include "GLUtils.h"
+#include "OpenGLUtils.h"
 
-GLuint GLUtils::createProgram(const char *vertexShader, const char *fragShader) {
+#include <AndroidLog.h>
+
+GLuint OpenGLUtils::createProgram(const char *vertexShader, const char *fragShader) {
     GLuint vertex;
     GLuint fragment;
     GLuint program;
@@ -50,19 +52,23 @@ GLuint GLUtils::createProgram(const char *vertexShader, const char *fragShader) 
             free(infoLog);
         }
         // 删除着色器释放内存
+        glDetachShader(program, vertex);
         glDeleteShader(vertex);
+        glDetachShader(program, fragment);
         glDeleteShader(fragment);
         glDeleteProgram(program);
         return 0;
     }
     // 删除着色器释放内存
+    glDetachShader(program, vertex);
     glDeleteShader(vertex);
+    glDetachShader(program, fragment);
     glDeleteShader(fragment);
 
     return program;
 }
 
-GLuint GLUtils::loadShader(GLenum type, const char *shaderSrc) {
+GLuint OpenGLUtils::loadShader(GLenum type, const char *shaderSrc) {
     GLuint shader;
     GLint compiled;
     // 创建shader
@@ -100,7 +106,7 @@ GLuint GLUtils::loadShader(GLenum type, const char *shaderSrc) {
     return shader;
 }
 
-void GLUtils::checkActiveUniform(GLuint program) {
+void OpenGLUtils::checkActiveUniform(GLuint program) {
     GLint maxLen;
     GLint numUniforms;
     char *uniformName;
@@ -146,7 +152,7 @@ void GLUtils::checkActiveUniform(GLuint program) {
     }
 }
 
-GLuint GLUtils::createTexture(GLenum type) {
+GLuint OpenGLUtils::createTexture(GLenum type) {
     GLuint textureId;
     // 设置解包对齐
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -163,7 +169,7 @@ GLuint GLUtils::createTexture(GLenum type) {
     return textureId;
 }
 
-GLuint GLUtils::createTextureWithBytes(unsigned char *bytes, int width, int height) {
+GLuint OpenGLUtils::createTextureWithBytes(unsigned char *bytes, int width, int height) {
     GLuint textureId;
     if (bytes == NULL) {
         return 0;
@@ -183,8 +189,8 @@ GLuint GLUtils::createTextureWithBytes(unsigned char *bytes, int width, int heig
     return textureId;
 }
 
-GLuint
-GLUtils::createTextureWithOldTexture(GLuint texture, unsigned char *bytes, int width, int height) {
+GLuint OpenGLUtils::createTextureWithOldTexture(GLuint texture, unsigned char *bytes, int width,
+                                                int height) {
     if (texture == 0) {
         return createTextureWithBytes(bytes, width, height);
     }
@@ -195,12 +201,12 @@ GLUtils::createTextureWithOldTexture(GLuint texture, unsigned char *bytes, int w
     return texture;
 }
 
-void GLUtils::createFrameBuffer(GLuint *framebuffer, GLuint *texture, int width, int height) {
+void OpenGLUtils::createFrameBuffer(GLuint *framebuffer, GLuint *texture, int width, int height) {
     createFrameBuffers(framebuffer, texture, width, height, 1);
 }
 
-void GLUtils::createFrameBuffers(GLuint *frambuffers, GLuint *textures, int width, int height,
-                                 int size) {
+void OpenGLUtils::createFrameBuffers(GLuint *frambuffers, GLuint *textures, int width, int height,
+                                     int size) {
     // 创建FBO
     glGenFramebuffers(size, frambuffers);
     // 创建Texture
@@ -221,8 +227,18 @@ void GLUtils::createFrameBuffers(GLuint *frambuffers, GLuint *textures, int widt
     }
 }
 
-void GLUtils::checkGLError(const char *op) {
+void OpenGLUtils::checkGLError(const char *op) {
     for (GLint error = glGetError(); error; error = glGetError()) {
         ALOGE("[GLES2] after %s() glError (0x%x)\n", op, error);
     }
+}
+
+void OpenGLUtils::bindTexture(int location, int texture, int index) {
+    bindTexture(location, texture, index, GL_TEXTURE_2D);
+}
+
+void OpenGLUtils::bindTexture(int location, int texture, int index, int textureType) {
+    glActiveTexture(GL_TEXTURE0 + index);
+    glBindTexture(textureType, texture);
+    glUniform1i(location, index);
 }
