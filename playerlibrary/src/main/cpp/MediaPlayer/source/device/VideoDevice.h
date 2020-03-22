@@ -6,7 +6,7 @@
 #define VIDEODEVICE_H
 
 #include <player/PlayerState.h>
-#include <renderer/GLInputFilter.h>
+#include <Filter.h>
 
 class VideoDevice {
 public:
@@ -15,6 +15,9 @@ public:
     virtual ~VideoDevice();
 
     virtual void terminate();
+
+    // 设置时间戳
+    virtual void setTimeStamp(double timeStamp);
 
     // 初始化视频纹理宽高
     virtual void onInitTexture(int width, int height, TextureFormat format, BlendMode blendMode, int rotate = 0);

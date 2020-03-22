@@ -3,7 +3,6 @@ package com.cgfay.media;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
-import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.media.AudioManager;
 import android.net.Uri;
@@ -66,6 +65,7 @@ public class CainMediaPlayer implements IMediaPlayer {
     static {
         System.loadLibrary("ffmpeg");
         System.loadLibrary("soundtouch");
+        System.loadLibrary("yuv");
         System.loadLibrary("media_player");
         native_init();
     }
@@ -683,7 +683,6 @@ public class CainMediaPlayer implements IMediaPlayer {
         mOnErrorListener = null;
         mOnInfoListener = null;
         mOnVideoSizeChangedListener = null;
-        mOnTimedTextListener = null;
         mOnCurrentPositionListener = null;
         _release();
     }
@@ -830,6 +829,51 @@ public class CainMediaPlayer implements IMediaPlayer {
     private native void _setPitch(float pitch);
 
 
+    /**
+     * change filter
+     * @param name filter name
+     */
+    public void changeFilter(String name) {
+        _changeFilter(NODE_FILTER, name);
+    }
+
+    /**
+     * change filter
+     * @param id filter id
+     */
+    public void changeFilter(int id) {
+        _changeFilter(NODE_FILTER, id);
+    }
+
+    /**
+     * change effect
+     * @param name effect name
+     */
+    public void changeEffect(String name) {
+        _changeFilter(NODE_EFFECT, name);
+    }
+
+    /**
+     * change effect
+     * @param id effect id
+     */
+    public void changeEffect(int id) {
+        _changeFilter(NODE_EFFECT, id);
+    }
+
+    // 渲染结点类型，跟Native层的RenderNodeType数值保持一致。
+    private static final int NODE_NONE = -1;
+    private static final int NODE_INPUT = 0;
+    private static final int NODE_BEAUTY = 1;
+    private static final int NODE_FACE = 2;
+    private static final int NODE_MAKEUP = 3;
+    private static final int NODE_FILTER = 4;
+    private static final int NODE_EFFECT = 5;
+    private static final int NODE_DISPLAY = 7;
+
+    private native void _changeFilter(int type, String name);
+    private native void _changeFilter(int type, int id);
+
     // ---------------------------------------------------------------------------------------------
     // Options
     public static final int OPT_CATEGORY_FORMAT = 1;    // 解封装参数
@@ -963,16 +1007,7 @@ public class CainMediaPlayer implements IMediaPlayer {
                 }
 
                 case MEDIA_TIMED_TEXT: {
-                    if (mOnTimedTextListener != null) {
-                        if (msg.obj == null) {
-                            mOnTimedTextListener.onTimedText(mMediaPlayer, null);
-                        } else {
-                            if (msg.obj instanceof byte[]) {
-                                CainTimedText text = new CainTimedText(new Rect(0, 0, 1, 1), (String) (msg.obj));
-                                mOnTimedTextListener.onTimedText(mMediaPlayer, text);
-                            }
-                        }
-                    }
+                    // do nothing
                     return;
                 }
 
@@ -1081,20 +1116,6 @@ public class CainMediaPlayer implements IMediaPlayer {
 
     private OnVideoSizeChangedListener mOnVideoSizeChangedListener;
 
-    /**
-     * Register a callback to be invoked when a timed text is available
-     * for display.
-     *
-     * @param listener the callback that will be run
-     * {@hide}
-     */
-    @Override
-    public void setOnTimedTextListener(OnTimedTextListener listener) {
-        mOnTimedTextListener = listener;
-    }
-
-    private OnTimedTextListener mOnTimedTextListener;
-
 
     /**
      * Register a callback to be invoked when an error has happened
@@ -1122,7 +1143,7 @@ public class CainMediaPlayer implements IMediaPlayer {
     private OnInfoListener mOnInfoListener;
 
     /**
-     * Interface definition of a callback to be invoked when on playing position.
+     * Interface definition of a callback to be invoked to playing position.
      */
     public interface OnCurrentPositionListener {
 
@@ -1130,7 +1151,7 @@ public class CainMediaPlayer implements IMediaPlayer {
     }
 
     /**
-     * Register a callback to be invoked when on playing position.
+     * Register a callback to be invoked on playing position.
      * @param listener
      */
     public void setOnCurrentPositionListener(OnCurrentPositionListener listener) {

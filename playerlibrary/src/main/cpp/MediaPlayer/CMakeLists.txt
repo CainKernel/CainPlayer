@@ -12,12 +12,15 @@ endif (${ANDROID_PLATFORM_LEVEL} LESS 11)
 
 # 添加 soundtouch 动态库
 set(soundtouch_dir ../SoundTouch)
-add_subdirectory(${soundtouch_dir} soundtouch)
+
+# 添加GLFilter库
+set(filter_dir ../CainFilter)
 
 # 添加头文件路径
 include_directories( source
                      android
-                     ${soundtouch_dir} )
+                     ${soundtouch_dir}
+                     ${filter_dir} )
 
 # 添加源文件
 add_library( media_player
@@ -41,19 +44,6 @@ add_library( media_player
              source/queue/FrameQueue.cpp
              source/queue/PacketQueue.cpp
 
-             source/renderer/CainEGLContext.cpp
-             source/renderer/CoordinateUtils.cpp
-             source/renderer/EglHelper.cpp
-             source/renderer/FrameBuffer.cpp
-             source/renderer/GLFilter.cpp
-             source/renderer/GLInputABGRFilter.cpp
-             source/renderer/GLInputFilter.cpp
-             source/renderer/GLInputYUV420PFilter.cpp
-             source/renderer/InputRenderNode.cpp
-             source/renderer/OpenGLUtils.cpp
-             source/renderer/RenderNode.cpp
-             source/renderer/vecmath.cpp
-
              source/sync/MediaClock.cpp
              source/sync/MediaSync.cpp
 
@@ -72,6 +62,8 @@ target_link_libraries( media_player
 
                        ffmpeg
                        soundtouch
+                       yuv
+                       cainfilter
 
                        -landroid
                        -llog

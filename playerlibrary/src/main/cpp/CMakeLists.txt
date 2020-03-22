@@ -21,8 +21,20 @@ set_target_properties( ffmpeg
                        PROPERTIES IMPORTED_LOCATION
                        ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libffmpeg.so )
 
+# 添加yuv库
+add_library(yuv SHARED IMPORTED )
+set_target_properties( yuv
+        PROPERTIES IMPORTED_LOCATION
+        ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libyuv.so )
+
 # Metadata库
 add_subdirectory(${CMAKE_SOURCE_DIR}/Metadata)
+
+# SoundTouch库
+add_subdirectory(${CMAKE_SOURCE_DIR}/SoundTouch)
+
+# GLFilter库
+add_subdirectory(${CMAKE_SOURCE_DIR}/CainFilter)
 
 # 媒体播放器
 add_subdirectory(${CMAKE_SOURCE_DIR}/MediaPlayer)

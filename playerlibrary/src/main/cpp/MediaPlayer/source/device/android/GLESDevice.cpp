@@ -2,8 +2,6 @@
 // Created by cain on 2018/12/30.
 //
 
-#include <AndroidLog.h>
-#include <renderer/CoordinateUtils.h>
 #include "GLESDevice.h"
 
 GLESDevice::GLESDevice() {
@@ -20,6 +18,14 @@ GLESDevice::GLESDevice() {
     mVideoTexture = (Texture *) malloc(sizeof(Texture));
     memset(mVideoTexture, 0, sizeof(Texture));
     mRenderNode = NULL;
+    nodeList = new RenderNodeList();
+    nodeList->addNode(new DisplayRenderNode());     // 显示渲染结点
+    memset(&filterInfo, 0, sizeof(FilterInfo));
+    filterInfo.type = NODE_NONE;
+    filterInfo.name = nullptr;
+    filterInfo.id = -1;
+    filterChange = false;
+
     resetVertices();
     resetTexVertices();
 }
@@ -64,6 +70,14 @@ void GLESDevice::terminate(bool releaseContext) {
         eglHelper->release();
         mHaveEGlContext = false;
     }
+}
+
+void GLESDevice::setTimeStamp(double timeStamp) {
+    mMutex.lock();
+    if (nodeList) {
+        nodeList->setTimeStamp(timeStamp);
+    }
+    mMutex.unlock();
 }
 
 void GLESDevice::onInitTexture(int width, int height, TextureFormat format, BlendMode blendMode,
@@ -123,8 +137,17 @@ void GLESDevice::onInitTexture(int width, int height, TextureFormat format, Blen
         mRenderNode = new InputRenderNode();
         if (mRenderNode != NULL) {
             mRenderNode->initFilter(mVideoTexture);
+            FrameBuffer *frameBuffer = new FrameBuffer(width, height);
+            frameBuffer->init();
+            mRenderNode->setFrameBuffer(frameBuffer);
         }
     }
+    if (filterChange) {
+        nodeList->changeFilter(filterInfo.type, FilterManager::getInstance()->getFilter(&filterInfo));
+        filterChange = false;
+    }
+    nodeList->init();
+    nodeList->setTextureSize(width, height);
     mMutex.unlock();
 }
 
@@ -173,17 +196,40 @@ int GLESDevice::onRequestRender(bool flip) {
     }
     mMutex.lock();
     mVideoTexture->direction = flip ? FLIP_VERTICAL : FLIP_NONE;
-    ALOGD("flip ? %d", flip);
     if (mRenderNode != NULL && eglSurface != EGL_NO_SURFACE) {
         eglHelper->makeCurrent(eglSurface);
+        int texture = mRenderNode->drawFrameBuffer(mVideoTexture);
         if (mSurfaceWidth != 0 && mSurfaceHeight != 0) {
-            mRenderNode->setDisplaySize(mSurfaceWidth, mSurfaceHeight);
+            nodeList->setDisplaySize(mSurfaceWidth, mSurfaceHeight);
         }
-        mRenderNode->drawFrame(mVideoTexture);
+        nodeList->drawFrame(texture, vertices, textureVertices);
         eglHelper->swapBuffers(eglSurface);
     }
     mMutex.unlock();
     return 0;
+}
+
+
+void GLESDevice::changeFilter(RenderNodeType type, const char *filterName) {
+    mMutex.lock();
+    filterInfo.type = type;
+    filterInfo.name = av_strdup(filterName);
+    filterInfo.id = -1;
+    filterChange = true;
+    mMutex.unlock();
+}
+
+void GLESDevice::changeFilter(RenderNodeType type, const int id) {
+    mMutex.lock();
+    filterInfo.type = type;
+    if (filterInfo.name) {
+        av_freep(&filterInfo.name);
+        filterInfo.name = nullptr;
+    }
+    filterInfo.name = nullptr;
+    filterInfo.id = id;
+    filterChange = true;
+    mMutex.unlock();
 }
 
 void GLESDevice::resetVertices() {

@@ -8,9 +8,9 @@
 #include <device/VideoDevice.h>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
-
-#include <renderer/EglHelper.h>
-#include <renderer/InputRenderNode.h>
+#include <node/DisplayRenderNode.h>
+#include <node/InputRenderNode.h>
+#include <node/RenderNodeList.h>
 
 class GLESDevice : public VideoDevice {
 public:
@@ -24,6 +24,8 @@ public:
 
     void terminate(bool releaseContext);
 
+    void setTimeStamp(double timeStamp) override;
+
     void onInitTexture(int width, int height, TextureFormat format, BlendMode blendMode,
                        int rotate) override;
 
@@ -33,6 +35,10 @@ public:
     int onUpdateARGB(uint8_t *rgba, int pitch) override;
 
     int onRequestRender(bool flip) override;
+
+    void changeFilter(RenderNodeType type, const char *filterName);
+
+    void changeFilter(RenderNodeType type, const int id);
 
 private:
     void resetVertices();
@@ -54,8 +60,11 @@ private:
 
     Texture *mVideoTexture;             // 视频纹理
     InputRenderNode *mRenderNode;       // 输入渲染结点
-    float vertices[8];                  // 顶点坐标
-    float textureVertices[8];           // 纹理坐标
+    RenderNodeList *nodeList;           // 滤镜链
+    FilterInfo filterInfo;              // 滤镜信息
+    bool filterChange;                  // 切换滤镜
+    GLfloat vertices[8];                // 顶点坐标
+    GLfloat textureVertices[8];         // 纹理坐标
 };
 
 #endif //GLESDEVICE_H
